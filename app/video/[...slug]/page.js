@@ -42,9 +42,16 @@ const getVideoData = cache(async (videoId) => {
 
       // If the response is not OK, log it and try the next key.
       const errorData = await response.json();
-      console.warn(`API key #${index + 1} failed with status ${response.status}: ${errorData?.error?.message}. Trying next key...`);
+      console.warn(
+        `API key #${index + 1} failed with status ${response.status}: ${
+          errorData?.error?.message
+        }. Trying next key...`
+      );
     } catch (error) {
-      console.warn(`Network error with API key #${index + 1}. Trying next key...`, error);
+      console.warn(
+        `Network error with API key #${index + 1}. Trying next key...`,
+        error
+      );
     }
   }
 
@@ -55,7 +62,8 @@ const getVideoData = cache(async (videoId) => {
 
 // Dynamically generate metadata
 export async function generateMetadata({ params }) {
-  const [videoId, channelIdentifier] = await params.slug || [];
+  const awaitedParam = await params;
+  const [videoId, channelIdentifier] = awaitedParam.slug || [];
 
   if (!videoId) {
     return { title: "Video Not Found" };
@@ -142,8 +150,8 @@ function VideoError() {
 }
 
 export default async function VideoPage({ params }) {
-  // Array destructuring is used for cleaner slug parsing
-  const [videoId, channelTitle] = await params.slug || [];
+  const awaitedParam = await params;
+  const [videoId, channelTitle] = awaitedParam.slug || [];
 
   // A videoId is required to fetch data.
   if (!videoId) {
@@ -158,7 +166,5 @@ export default async function VideoPage({ params }) {
     return <VideoError />;
   }
 
-  return (
-    <VideoPageClient videoId={videoId} initialVideoData={videoData} />
-  );
+  return <VideoPageClient videoId={videoId} initialVideoData={videoData} />;
 }
