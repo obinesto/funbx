@@ -211,7 +211,7 @@ function PushNotificationManager() {
       {subscription ? (
         <>
           <p className="text-sm text-muted-foreground mb-2">
-            You&apos;ll receive notifications about videoa you&apos;ve
+            You&apos;ll receive notifications about videos you&apos;ve
             interacted with.
           </p>
           <div className="flex flex-col gap-4">
