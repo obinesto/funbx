@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { validateRequest } from "@/lib/utils/auth";
+import { validateRequest } from "@/lib/auth";
 import { sendPushNotification, getSubscriptionsForUser } from "@/lib/pushNotification";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -143,7 +143,7 @@ export async function POST(request) {
         const payload = {
           title: "Liked Videos Updated!",
           body: `You now have ${count} liked videos.`,
-          icon: "/icon.png",
+          icon: "/web-app-manifest-192x192.png",
         };
 
         // 4. Send a notification to each of the user's subscribed devices.

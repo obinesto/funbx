@@ -1,5 +1,6 @@
 {
   "name": "YouTube Clone App",
+  "id": "/",
   "short_name": "YouTube Clone",
   "description": "A progressive web application that replicates the core features of YouTube.",
   "scope": "/",
@@ -11,12 +12,23 @@
     {
       "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "video"],
+  "screenshots": [
+    {
+      "src": "/preview.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide"
     }
   ]
 }

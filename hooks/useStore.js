@@ -2,21 +2,40 @@ import { create } from "zustand";
 import {
   signInWithPopup,
   signOut,
-  onAuthStateChanged,
+  // onAuthStateChanged,
+  onIdTokenChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   GoogleAuthProvider,
   updateProfile,
 } from "firebase/auth";
-import { auth } from "../lib/utils/firebase";
+import { auth } from "../lib/firebase";
 import {
   findUserByEmail,
   createUser,
   updateUserFirebaseUid,
-} from "../lib/utils/database/users";
+} from "../lib/database/users";
 
 const provider = new GoogleAuthProvider();
+
+async function syncSessionCookie(token) {
+  if (!token) return;
+
+  await fetch("/api/session", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ idToken: token }),
+  });
+}
+
+async function clearSessionCookie() {
+  await fetch("/api/session", {
+    method: "DELETE",
+  }).catch(() => {});
+}
 
 const useUserStore = create((set) => ({
   user: null,
@@ -30,6 +49,7 @@ const useUserStore = create((set) => ({
   logout: async () => {
     try {
       await signOut(auth);
+      await clearSessionCookie();
       set({ user: null, token: null, isAuthenticated: false, error: null });
     } catch (error) {
       set({ error: error.message });
@@ -60,6 +80,7 @@ const useUserStore = create((set) => ({
         }
 
         const token = await result.user.getIdToken();
+        await syncSessionCookie(token);
         set({
           user: result.user,
           token,
@@ -94,7 +115,7 @@ const useUserStore = create((set) => ({
       const result = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
 
       // Create Supabase user record
@@ -112,6 +133,7 @@ const useUserStore = create((set) => ({
       }
 
       const token = await result.user.getIdToken();
+      await syncSessionCookie(token);
       set({
         user: result.user,
         token,
@@ -145,6 +167,7 @@ const useUserStore = create((set) => ({
       }
 
       const token = await result.user.getIdToken();
+      await syncSessionCookie(token);
       set({
         user: result.user,
         token,
@@ -202,27 +225,31 @@ const useUserStore = create((set) => ({
 }));
 
 // auth state listener
-onAuthStateChanged(auth, async (currentUser) => {
+onIdTokenChanged(auth, async (currentUser) => {
   if (currentUser) {
     try {
       const token = await currentUser.getIdToken();
+      await syncSessionCookie(token);
       // If getIdToken() succeeds, Firebase has handled token refresh if needed.
       // The token is valid.
-      useUserStore.setState({
-        user: currentUser, 
-        token,
-        loading: false,
-        isAuthenticated: true,
-        error: null,
-      });
+      if (token) {
+        useUserStore.setState({
+          user: currentUser,
+          token,
+          loading: false,
+          isAuthenticated: true,
+          error: null,
+        });
+      }
     } catch (error) {
       // May happen if getIdToken() fails (e.g., network issue, token refresh fails, user disabled).
       // This indicates the session is no longer valid.
       console.error(
         "onAuthStateChanged: Error getting ID token or user session invalid.",
-        error
+        error,
       );
       await signOut(auth);
+      await clearSessionCookie();
       useUserStore.setState({
         user: null,
         token: null,
@@ -233,6 +260,7 @@ onAuthStateChanged(auth, async (currentUser) => {
       });
     }
   } else {
+    await clearSessionCookie();
     useUserStore.setState({
       user: null,
       token: null,

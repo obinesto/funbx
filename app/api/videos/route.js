@@ -1,10 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from 'cloudinary';
-import { validateRequest } from '@/lib/utils/auth';
+import { validateRequest } from '@/lib/auth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const MAX_VIDEO_FILE_SIZE = 50 * 1024 * 1024;
 
 // Configure Cloudinary
 cloudinary.config({
@@ -76,7 +77,7 @@ export async function GET(request) {
       throw videosError;
     }
 
-    return NextResponse.json(videos);
+    return NextResponse.json({ videos });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -123,9 +124,9 @@ export async function POST(request) {
       );
     }
 
-    if (videoFile.size > 100 * 1024 * 1024) { // 100MB limit
+    if (videoFile.size > MAX_VIDEO_FILE_SIZE) {
       return NextResponse.json(
-        { error: "File size exceeds 100MB" },
+        { error: "File size exceeds 50MB" },
         { status: 400 }
       );
     }
@@ -178,73 +179,17 @@ export async function POST(request) {
     // Generate thumbnail URL - this is a direct thumbnail URL from the video
     const thumbnailUrl = cloudinary.url(cloudinaryUpload.public_id, {
       resource_type: 'video',
+      secure: true,
+      format: 'jpg',
       transformation: [
         { width: 1280, height: 720, crop: 'fill' },
-        { quality: 'auto:good', format: 'jpg' }
+        { quality: 'auto:good' }
       ]
     });
 
-    // Then check for existing video using the Cloudinary public_id
-    const { data: existingVideo, error: findError } = await supabase
-      .from("videos")
-      .select("*")
-      .eq("video_url", cloudinaryUpload.secure_url)
-      .single();
-
-    if (findError && findError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      throw findError;
-    }
-
-    // Handle different actions
-    if (existingVideo) {
-      if (action === "update") {
-        const { data: updatedVideo, error: updateError } = await supabase
-          .from("videos")
-          .update({
-            title,
-            description,
-            video_url: cloudinaryUpload.secure_url,
-            public_id: cloudinaryUpload.public_id,
-            thumbnail_url: thumbnailUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", existingVideo.id)
-          .select("*")
-          .single();
-
-        if (updateError) {
-          throw updateError;
-        }
-        return NextResponse.json(updatedVideo);
-
-      } else if (action === "delete") {
-        // Delete from Cloudinary first
-        await cloudinary.uploader.destroy(existingVideo.public_id, { resource_type: "video" });
-        
-        const { error: deleteError } = await supabase
-          .from("videos")
-          .delete()
-          .eq("id", existingVideo.id);
-
-        if (deleteError) {
-          throw deleteError;
-        }
-        return NextResponse.json({ success: true });
-
-      } else if (action === "view") {
-        return NextResponse.json(existingVideo);
-      }
-
-      return NextResponse.json(
-        { error: "Invalid action for existing video" },
-        { status: 400 }
-      );
-    }
-
-    // Handle new video creation
     if (action !== "create") {
       return NextResponse.json(
-        { error: "Invalid action for new video" },
+        { error: "Invalid action" },
         { status: 400 }
       );
     }
@@ -274,6 +219,65 @@ export async function POST(request) {
     return NextResponse.json(newVideo);
   } catch (error) {
     console.error('Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const decodedToken = await validateRequest(request);
+    if (!decodedToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { videoId, email } = await request.json();
+    if (!videoId || !email) {
+      return NextResponse.json(
+        { error: "VideoId and email are required" },
+        { status: 400 }
+      );
+    }
+
+    if (email !== decodedToken.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (userError) {
+      throw userError;
+    }
+
+    const { data: video, error: videoError } = await supabase
+      .from("videos")
+      .select("*")
+      .eq("id", videoId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (videoError) {
+      throw videoError;
+    }
+
+    await cloudinary.uploader.destroy(video.public_id, { resource_type: "video" });
+
+    const { error: deleteError } = await supabase
+      .from("videos")
+      .delete()
+      .eq("id", video.id)
+      .eq("user_id", user.id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Delete video error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

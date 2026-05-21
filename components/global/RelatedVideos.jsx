@@ -1,0 +1,48 @@
+"use client";
+import { useRelatedVideos } from "@/hooks/useQueries";
+import { Skeleton } from "@/components/ui/skeleton";
+import VideoCard from "./VideoCard";
+
+export default function RelatedVideos({ currentVideoId, videoTitle }) {
+  const { data: videos, isLoading } = useRelatedVideos(currentVideoId, videoTitle);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {Array(4).fill(null).map((_, index) => (
+          <div key={index} className="relative">
+            <div className="aspect-video">
+              <Skeleton className="absolute inset-0" />
+            </div>
+            <div className="mt-2 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!videos?.length) {
+    return <div className="text-muted-foreground">No related videos found</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold">Related Videos</h2>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {videos?.map((video) => (
+          <VideoCard
+            key={video.id.videoId}
+            videoId={video.id.videoId}
+            title={video.snippet.title}
+            thumbnail={video.snippet.thumbnails.high?.url}
+            channelTitle={video.snippet.channelTitle}
+            createdAt={video.snippet.publishedAt}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

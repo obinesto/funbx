@@ -2,6 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import useUserStore from "./useStore";
 import * as Sentry from "@sentry/react";
+import {
+  clearWatchHistoryAction,
+  deleteVideoAction,
+  setSavedVideoAction,
+  setSubscriptionAction,
+  setVideoLikeAction,
+} from "@/app/actions/protected";
 
 const STALE_TIME = 1000 * 60 * 5; // 5 minutes
 const CACHE_TIME = 1000 * 60 * 60 * 24 * 7; // 1 week
@@ -15,7 +22,7 @@ const handleApiError = (error) => {
     throw new Error("Video not found.");
   }
   throw new Error(
-    error.response?.data?.message || "An unexpected error occurred."
+    error.response?.data?.message || "An unexpected error occurred.",
   );
 };
 
@@ -28,6 +35,26 @@ function shuffleArray(array) {
   }
   return shuffled;
 }
+
+// Get thumbnail from cloudinary uploaded videos
+const toHttpsUrl = (url) =>
+  typeof url === "string" ? url.replace(/^http:\/\//, "https://") : url;
+
+const getUserVideoThumbnail = (video) => {
+  if (video.thumbnail_url) return toHttpsUrl(video.thumbnail_url);
+};
+
+const normalizeUserVideo = (video, user) => ({
+  ...video,
+  id: video.id,
+  videoId: video.id,
+  title: video.title,
+  thumbnail: getUserVideoThumbnail(video),
+  channelTitle: user?.displayName || user?.email || "Your channel",
+  createdAt: video.created_at,
+  videoUrl: video.video_url,
+  isUserVideo: true,
+});
 
 const fetchVideoDetailsInChunks = async (videoIds) => {
   const CHUNK_SIZE = 50; // YouTube API limit for IDs per request
@@ -77,7 +104,7 @@ const fetchGuestFeed = async () => {
   }
 };
 
-export const useFeed = () => {
+export const useFeed = (options = {}) => {
   const { isAuthenticated, token, user } = useUserStore();
 
   return useQuery({
@@ -156,14 +183,14 @@ export const useFeed = () => {
                         videoEmbeddable: true,
                       },
                     })
-                    .catch(() => ({ data: { items: [] } })) // Handle individual search failures gracefully
+                    .catch(() => ({ data: { items: [] } })), // Handle individual search failures gracefully
               );
 
               const searchResults = await Promise.all(searchPromises);
 
               // Combine all results and remove duplicates
               const allSearchItems = searchResults.flatMap(
-                (result) => result.data.items || []
+                (result) => result.data.items || [],
               );
               const uniqueVideoIds = [
                 ...new Set(allSearchItems.map((item) => item.id.videoId)),
@@ -176,9 +203,8 @@ export const useFeed = () => {
                   level: "info",
                 });
 
-                const detailsItems = await fetchVideoDetailsInChunks(
-                  uniqueVideoIds
-                );
+                const detailsItems =
+                  await fetchVideoDetailsInChunks(uniqueVideoIds);
                 // combine feed source for a more unique feed page
                 let combinedFeed = [
                   ...(await fetchGuestFeed()),
@@ -188,7 +214,7 @@ export const useFeed = () => {
                 // remove duplicate videos
                 const uniqueFeed = [
                   ...new Map(
-                    combinedFeed.map((video) => [video.id, video])
+                    combinedFeed.map((video) => [video.id, video]),
                   ).values(),
                 ];
 
@@ -210,6 +236,7 @@ export const useFeed = () => {
     retry: (failureCount, error) => {
       return failureCount < 2 && !error.message.includes("quota exceeded");
     },
+    ...options,
   });
 };
 
@@ -244,7 +271,7 @@ export const useSearchVideos = (query) => {
   });
 };
 
-export const useVideoDetails = (videoId) => {
+export const useVideoDetails = (videoId, options = {}) => {
   const queryClient = useQueryClient();
 
   return useQuery({
@@ -283,7 +310,7 @@ export const useVideoDetails = (videoId) => {
         handleApiError(error);
       }
     },
-    enabled: Boolean(videoId),
+    enabled: Boolean(videoId && options.enabled !== false),
     staleTime: STALE_TIME,
     cacheTime: CACHE_TIME,
     retry: (failureCount, error) => {
@@ -323,7 +350,7 @@ export const useRelatedVideos = (videoId, videoTitle) => {
         }
 
         return response.data.items.filter(
-          (item) => item.id.videoId !== videoId
+          (item) => item.id.videoId !== videoId,
         );
       } catch (error) {
         handleApiError(error);
@@ -340,7 +367,7 @@ export const useRelatedVideos = (videoId, videoTitle) => {
 };
 
 // Watch History
-export const useWatchHistory = () => {
+export const useWatchHistory = (options = {}) => {
   const { isAuthenticated, token, user } = useUserStore();
 
   return useQuery({
@@ -360,23 +387,23 @@ export const useWatchHistory = () => {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
         if (!response.ok) {
           const errorData = await response.json();
           console.error("API error response:", errorData);
           throw new Error(
-            `Failed to fetch watch history (Status: ${response.status})`
+            `Failed to fetch watch history (Status: ${response.status})`,
           );
         }
         const data = await response.json();
 
         // Separate YouTube videos from user-uploaded videos
         const youtubeVideos = data.watchHistory.filter(
-          (history) => !history.is_user_video
+          (history) => !history.is_user_video,
         );
         const userVideos = data.watchHistory.filter(
-          (history) => history.is_user_video
+          (history) => history.is_user_video,
         );
 
         // Get YouTube video details
@@ -391,13 +418,19 @@ export const useWatchHistory = () => {
               id: videoIds,
             },
           });
-          youtubeVideoDetails = youtubeVideos.map((video) => {
-            const videoData = videos.items.find((v) => v.id === video.video_id);
-            return {
-              ...videoData,
-              watchedAt: video.created_at,
-            };
-          });
+          youtubeVideoDetails = youtubeVideos
+            .map((video) => {
+              const videoData = videos.items.find(
+                (v) => v.id === video.video_id,
+              );
+              return videoData
+                ? {
+                    ...videoData,
+                    watchedAt: video.created_at,
+                  }
+                : null;
+            })
+            .filter(Boolean);
         }
 
         // Get user-uploaded video details
@@ -413,20 +446,25 @@ export const useWatchHistory = () => {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
               },
-            }
+            },
           );
           if (!userVideoResponse.ok)
             throw new Error("Failed to fetch user videos");
           const userData = await userVideoResponse.json();
-          userVideoDetails = userVideos.map((video) => {
-            const videoData = userData.videos.find(
-              (v) => v.id === video.video_id
-            );
-            return {
-              ...videoData,
-              watchedAt: video.created_at,
-            };
-          });
+          userVideoDetails = userVideos
+            .map((video) => {
+              const videoData = userData.videos.find(
+                (v) => v.id === video.video_id,
+              );
+              return videoData
+                ? {
+                    ...videoData,
+                    watchedAt: video.created_at,
+                    isUserVideo: true,
+                  }
+                : null;
+            })
+            .filter(Boolean);
         }
 
         // Combine and sort all videos
@@ -447,6 +485,7 @@ export const useWatchHistory = () => {
     cacheTime: CACHE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
+    ...options,
   });
 };
 
@@ -489,7 +528,6 @@ export const useAddToHistory = () => {
 
 export const useClearHistory = () => {
   const queryClient = useQueryClient();
-  const { token, user } = useUserStore();
 
   return useMutation({
     mutationFn: async () => {
@@ -499,21 +537,7 @@ export const useClearHistory = () => {
           message: "Clearing watch history",
           level: "info",
         });
-        const response = await fetch(
-          `/api/history?email=${encodeURIComponent(user.email)}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: user.email,
-            }),
-          }
-        );
-        if (!response.ok) throw new Error("Failed to clear history");
-        return response.json();
+        return clearWatchHistoryAction();
       } catch (error) {
         Sentry.captureException(error);
         throw error;
@@ -526,7 +550,7 @@ export const useClearHistory = () => {
 };
 
 // Likes
-export const useLikedVideos = () => {
+export const useLikedVideos = (options = {}) => {
   const { isAuthenticated, token, user } = useUserStore();
 
   return useQuery({
@@ -546,7 +570,7 @@ export const useLikedVideos = () => {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         if (!response.ok) throw new Error("Failed to fetch liked videos");
@@ -556,7 +580,7 @@ export const useLikedVideos = () => {
 
         // Separate YouTube videos from user-uploaded videos
         const youtubeVideos = data.likes.filter(
-          (video) => !video.is_user_video
+          (video) => !video.is_user_video,
         );
         const userVideos = data.likes.filter((video) => video.is_user_video);
 
@@ -572,13 +596,19 @@ export const useLikedVideos = () => {
               id: videoIds,
             },
           });
-          youtubeVideoDetails = youtubeVideos.map((video) => {
-            const videoData = videos.items.find((v) => v.id === video.video_id);
-            return {
-              ...videoData,
-              likedAt: video.created_at,
-            };
-          });
+          youtubeVideoDetails = youtubeVideos
+            .map((video) => {
+              const videoData = videos.items.find(
+                (v) => v.id === video.video_id,
+              );
+              return videoData
+                ? {
+                    ...videoData,
+                    likedAt: video.created_at,
+                  }
+                : null;
+            })
+            .filter(Boolean);
         }
 
         // Get user-uploaded video details
@@ -594,20 +624,25 @@ export const useLikedVideos = () => {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
               },
-            }
+            },
           );
           if (!userVideoResponse.ok)
             throw new Error("Failed to fetch user videos");
           const userData = await userVideoResponse.json();
-          userVideoDetails = userVideos.map((video) => {
-            const videoData = userData.videos.find(
-              (v) => v.id === video.video_id
-            );
-            return {
-              ...videoData,
-              likedAt: video.created_at,
-            };
-          });
+          userVideoDetails = userVideos
+            .map((video) => {
+              const videoData = userData.videos.find(
+                (v) => v.id === video.video_id,
+              );
+              return videoData
+                ? {
+                    ...videoData,
+                    likedAt: video.created_at,
+                    isUserVideo: true,
+                  }
+                : null;
+            })
+            .filter(Boolean);
         }
 
         // Combine and sort all videos
@@ -626,42 +661,22 @@ export const useLikedVideos = () => {
     cacheTime: CACHE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
+    ...options,
   });
 };
 
 export const useVideoLikeMutation = () => {
   const queryClient = useQueryClient();
-  const { user, token } = useUserStore();
   return useMutation({
     mutationFn: async ({ videoId, action }) => {
       try {
-        if (!user?.email) {
-          throw new Error("User email required");
-        }
         Sentry.addBreadcrumb({
           category: "likes",
           message: `${action} video like`,
           level: "info",
         });
 
-        const response = await fetch("/api/likes", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            videoId,
-            action,
-            email: user.email,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to update like status");
-        }
-
-        return response.json();
+        return setVideoLikeAction(videoId, action);
       } catch (error) {
         Sentry.captureException(error);
         throw error;
@@ -689,7 +704,7 @@ export const useIsVideoLiked = (videoId) => {
         const likedVideosCache = queryClient.getQueryData(["likedVideos"]);
         if (likedVideosCache) {
           const isLiked = likedVideosCache.some(
-            (video) => video.id === videoId
+            (video) => video.id === videoId,
           );
           return isLiked;
         }
@@ -703,21 +718,21 @@ export const useIsVideoLiked = (videoId) => {
 
         const response = await fetch(
           `/api/likes?videoId=${videoId}&email=${encodeURIComponent(
-            user.email
+            user.email,
           )}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
         if (!response.ok) {
           console.error(
-            `Failed to fetch like status for video ${videoId}: ${response.statusText}`
+            `Failed to fetch like status for video ${videoId}: ${response.statusText}`,
           );
           throw new Error(
-            `Failed to fetch like status: ${response.statusText}`
+            `Failed to fetch like status: ${response.statusText}`,
           );
         }
         const data = await response.json();
@@ -737,7 +752,7 @@ export const useIsVideoLiked = (videoId) => {
 };
 
 // Saved Videos
-export const useSavedVideos = () => {
+export const useSavedVideos = (options = {}) => {
   const { isAuthenticated, token, user } = useUserStore();
 
   return useQuery({
@@ -757,7 +772,7 @@ export const useSavedVideos = () => {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         if (!response.ok) throw new Error("Failed to fetch saved videos list");
@@ -767,10 +782,10 @@ export const useSavedVideos = () => {
 
         // Separate YouTube videos from user-uploaded videos
         const youtubeVideos = data.savedVideos.filter(
-          (item) => !item.is_user_video
+          (item) => !item.is_user_video,
         );
         const userVideos = data.savedVideos.filter(
-          (item) => item.is_user_video
+          (item) => item.is_user_video,
         );
 
         // Get YouTube video details
@@ -783,13 +798,17 @@ export const useSavedVideos = () => {
               id: videoIds,
             },
           });
-          youtubeVideoDetails = youtubeVideos.map((item) => {
-            const videoData = videos.items.find((v) => v.id === item.video_id);
-            return {
-              ...videoData,
-              savedAt: item.created_at,
-            };
-          });
+          youtubeVideoDetails = youtubeVideos
+            .map((item) => {
+              const videoData = videos.items.find((v) => v.id === item.video_id);
+              return videoData
+                ? {
+                    ...videoData,
+                    savedAt: item.created_at,
+                  }
+                : null;
+            })
+            .filter(Boolean);
         }
 
         // Get user-uploaded video details
@@ -805,25 +824,30 @@ export const useSavedVideos = () => {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
               },
-            }
+            },
           );
           if (!userVideoResponse.ok)
             throw new Error("Failed to fetch user videos");
           const userData = await userVideoResponse.json();
-          userVideoDetails = userVideos.map((item) => {
-            const videoData = userData.videos.find(
-              (v) => v.id === item.video_id
-            );
-            return {
-              ...videoData,
-              savedAt: item.created_at,
-            };
-          });
+          userVideoDetails = userVideos
+            .map((item) => {
+              const videoData = userData.videos.find(
+                (v) => v.id === item.video_id,
+              );
+              return videoData
+                ? {
+                    ...videoData,
+                    savedAt: item.created_at,
+                    isUserVideo: true,
+                  }
+                : null;
+            })
+            .filter(Boolean);
         }
 
         // Combine and sort all videos
         return [...youtubeVideoDetails, ...userVideoDetails].sort(
-          (a, b) => new Date(b.savedAt) - new Date(a.savedAt)
+          (a, b) => new Date(b.savedAt) - new Date(a.savedAt),
         );
       } catch (error) {
         handleApiError(error);
@@ -834,44 +858,23 @@ export const useSavedVideos = () => {
     cacheTime: CACHE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
+    ...options,
   });
 };
 
 export const useSavedVideoMutation = () => {
   const queryClient = useQueryClient();
-  const { user, token } = useUserStore();
 
   return useMutation({
     mutationFn: async ({ videoId, action }) => {
       try {
-        if (!user?.email) {
-          throw new Error("User email required");
-        }
-
         Sentry.addBreadcrumb({
           category: "saved-videos",
           message: `${action} saved video`,
           level: "info",
         });
 
-        const response = await fetch("/api/saved-videos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            videoId,
-            action,
-            email: user.email,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to update saved video status");
-        }
-
-        return response.json();
+        return setSavedVideoAction(videoId, action);
       } catch (error) {
         Sentry.captureException(error);
         throw error;
@@ -900,7 +903,7 @@ export const useIsInSavedVideos = (videoId) => {
 
         if (savedVideosCache) {
           const isInSavedVideos = savedVideosCache.some(
-            (video) => video.id === videoId
+            (video) => video.id === videoId,
           );
           return isInSavedVideos;
         }
@@ -914,14 +917,14 @@ export const useIsInSavedVideos = (videoId) => {
 
         const response = await fetch(
           `/api/saved-videos?videoId=${videoId}&email=${encodeURIComponent(
-            user.email
+            user.email,
           )}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
         if (!response.ok) throw new Error("Failed to fetch saved video status");
         const data = await response.json();
@@ -941,7 +944,7 @@ export const useIsInSavedVideos = (videoId) => {
 };
 
 // User Videos
-export const useUserVideos = () => {
+export const useUserVideos = (options = {}) => {
   const { isAuthenticated, token, user } = useUserStore();
 
   return useQuery({
@@ -960,11 +963,13 @@ export const useUserVideos = () => {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
         if (!response.ok) throw new Error("Failed to fetch user videos");
         const data = await response.json();
-        return data.videos || [];
+        return (data.videos || []).map((video) =>
+          normalizeUserVideo(video, user),
+        );
       } catch (error) {
         handleApiError(error);
       }
@@ -974,46 +979,50 @@ export const useUserVideos = () => {
     cacheTime: CACHE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
+    ...options,
   });
 };
 
 export const useVideoMutation = () => {
   const queryClient = useQueryClient();
-  const { token } = useUserStore();
+  const { token, user } = useUserStore();
 
   return useMutation({
     mutationFn: async ({ type, videoId, data }) => {
       try {
+        if (!token || !user?.email) {
+          throw new Error("You must be signed in to manage videos");
+        }
+
         Sentry.addBreadcrumb({
           category: "user-videos",
           message: `${type} video operation`,
           level: "info",
         });
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          method:
-            type === "create" ? "POST" : type === "update" ? "PATCH" : "DELETE",
-          body: JSON.stringify(
-            type === "delete" ? { videoId } : { videoId, ...data }
-          ),
-        };
 
-        const response = await fetch(
-          `/api/users?email=${encodeURIComponent(user.email)}`,
-          config
-        );
-        if (!response.ok) throw new Error(`Failed to ${type} video`);
-        return response.json();
+        if (type === "create") {
+          const response = await fetch("/api/videos", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: data,
+          });
+
+          if (!response.ok) throw new Error(`Failed to ${type} video`);
+          return response.json();
+        } else if (type === "delete") {
+          return deleteVideoAction(videoId);
+        } else {
+          throw new Error("Unsupported video operation");
+        }
       } catch (error) {
         Sentry.captureException(error);
         throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(["userVideos"]);
+      queryClient.invalidateQueries({ queryKey: ["userVideos"] });
     },
   });
 };
@@ -1038,12 +1047,12 @@ export const useTrendingVideos = () => {
                 regionCode: region,
                 maxResults: 10,
               },
-            })
-          )
+            }),
+          ),
         );
 
         const combinedResponse = responses.flatMap(
-          (response) => response.data.items || []
+          (response) => response.data.items || [],
         );
 
         if (!combinedResponse.length) {
@@ -1052,7 +1061,7 @@ export const useTrendingVideos = () => {
 
         const uniqueVideos = [
           ...new Map(
-            combinedResponse.map((video) => [video.id, video])
+            combinedResponse.map((video) => [video.id, video]),
           ).values(),
         ];
 
@@ -1073,7 +1082,7 @@ export const useTrendingVideos = () => {
 };
 
 // subscriptions
-export const useSubscriptions = () => {
+export const useSubscriptions = (options = {}) => {
   const { isAuthenticated, token, user } = useUserStore();
 
   return useQuery({
@@ -1092,7 +1101,7 @@ export const useSubscriptions = () => {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
         if (!response.ok) throw new Error("Failed to fetch subscriptions");
         const data = await response.json();
@@ -1106,12 +1115,13 @@ export const useSubscriptions = () => {
     cacheTime: CACHE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
+    ...options,
   });
 };
 
 export const useSubscribeMutation = () => {
   const queryClient = useQueryClient();
-  const { token, user } = useUserStore();
+  const { user } = useUserStore();
 
   return useMutation({
     mutationFn: async ({ channelId, action, channelTitle }) => {
@@ -1126,25 +1136,7 @@ export const useSubscribeMutation = () => {
           level: "info",
         });
 
-        const response = await fetch("/api/subscriptions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            channelId,
-            action,
-            channelTitle,
-            email: user.email,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to update subscription status");
-        }
-
-        return response.json();
+        return setSubscriptionAction(channelId, channelTitle, action);
       } catch (error) {
         Sentry.captureException(error);
         throw error;
@@ -1169,7 +1161,7 @@ export const useIsSubscribed = (channelId) => {
         const subscriptionsCache = queryClient.getQueryData(["subscriptions"]);
         if (subscriptionsCache) {
           const channelSubscription = subscriptionsCache.find(
-            (sub) => sub.channel_id === channelId
+            (sub) => sub.channel_id === channelId,
           );
           if (channelSubscription) {
             return channelSubscription.is_subscribed;
@@ -1184,14 +1176,14 @@ export const useIsSubscribed = (channelId) => {
         });
         const response = await fetch(
           `/api/subscriptions?channelId=${channelId}&email=${encodeURIComponent(
-            user.email
+            user.email,
           )}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
         if (!response.ok)
           throw new Error("Failed to check subscription status");
@@ -1209,7 +1201,7 @@ export const useIsSubscribed = (channelId) => {
   });
 };
 
-export const useChannelInfo = (subscriptions) => {
+export const useChannelInfo = (subscriptions, options = {}) => {
   return useQuery({
     queryKey: ["channelInfo", subscriptions],
     queryFn: async () => {
@@ -1218,7 +1210,7 @@ export const useChannelInfo = (subscriptions) => {
       }
 
       try {
-        const channelIds = subscriptions.map(sub => sub.channel_id);
+        const channelIds = subscriptions.map((sub) => sub.channel_id);
         const uniqueChannelIds = [...new Set(channelIds)];
 
         // Fetch channel info
@@ -1246,14 +1238,17 @@ export const useChannelInfo = (subscriptions) => {
 
               // Get full video details for the channel's videos
               const videoIds = videosResponse.data.items.map(
-                (item) => item.id.videoId
+                (item) => item.id.videoId,
               );
-              const videoDetailsResponse = await axios.get("/api/youtube/videos", {
-                params: {
-                  part: "snippet,statistics,contentDetails",
-                  id: videoIds.join(","),
+              const videoDetailsResponse = await axios.get(
+                "/api/youtube/videos",
+                {
+                  params: {
+                    part: "snippet,statistics,contentDetails",
+                    id: videoIds.join(","),
+                  },
                 },
-              });
+              );
 
               return {
                 channelInfo: {
@@ -1265,10 +1260,13 @@ export const useChannelInfo = (subscriptions) => {
                 videos: videoDetailsResponse.data.items || [],
               };
             } catch (error) {
-              console.error(`Error fetching data for channel ${channelId}:`, error);
+              console.error(
+                `Error fetching data for channel ${channelId}:`,
+                error,
+              );
               return null;
             }
-          })
+          }),
         );
 
         // Filter out any failed channel requests
@@ -1280,6 +1278,7 @@ export const useChannelInfo = (subscriptions) => {
     },
     enabled: Boolean(subscriptions?.length > 0),
     staleTime: STALE_TIME,
-    cacheTime: CACHE_TIME
+    cacheTime: CACHE_TIME,
+    ...options,
   });
 };

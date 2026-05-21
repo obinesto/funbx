@@ -2,24 +2,34 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { sendPushNotification } from "@/lib/pushNotification";
+import { auth } from "@/lib/firebase-admin";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-export async function subscribeUser(subscription, firebaseUId) {
-  if (!firebaseUId) return { success: false, error: "User not authenticated" };
+async function getVerifiedUser(token) {
+  if (!token) {
+    return { user: null, error: "User not authenticated" };
+  }
 
-  //Get user_id using firebaseUId
+  const decodedToken = await auth.verifyIdToken(token);
   const { data: user, error: userError } = await supabase
     .from("users")
     .select("id")
-    .eq("firebase_uid", firebaseUId)
+    .eq("firebase_uid", decodedToken.uid)
     .single();
 
   if (userError) {
     throw userError;
   }
+
+  return { user, error: null };
+}
+
+export async function subscribeUser(subscription, token) {
+  const { user, error: authError } = await getVerifiedUser(token);
+  if (authError) return { success: false, error: authError };
 
   const { error } = await supabase.from("pwa_subscriptions").upsert(
     {
@@ -41,11 +51,15 @@ export async function subscribeUser(subscription, firebaseUId) {
   return { success: true };
 }
 
-export async function unsubscribeUser(subscription) {
+export async function unsubscribeUser(subscription, token) {
+  const { user, error: authError } = await getVerifiedUser(token);
+  if (authError) return { success: false, error: authError };
+
   const { error } = await supabase
     .from("pwa_subscriptions")
     .delete()
-    .eq("endpoint", subscription.endpoint);
+    .eq("endpoint", subscription.endpoint)
+    .eq("user_id", user.id);
 
   if (error) {
     console.error("Error removing subscription:", error);
@@ -55,12 +69,27 @@ export async function unsubscribeUser(subscription) {
   return { success: true };
 }
 
-export async function sendTestNotificationToUser(subscription, message) {
+export async function sendTestNotificationToUser(subscription, message, token) {
   if (!subscription) return { success: false, error: "No subscription found." };
+  const { user, error: authError } = await getVerifiedUser(token);
+  if (authError) return { success: false, error: authError };
+
+  const { data: savedSubscription, error } = await supabase
+    .from("pwa_subscriptions")
+    .select("subscription_data")
+    .eq("endpoint", subscription.endpoint)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !savedSubscription) {
+    return { success: false, error: "Subscription not found for this user." };
+  }
+
   const payload = {
     title: "Test Notification",
     body: message,
-    icon: "/icon.png",
+    icon: "/web-app-manifest-192x192.png",
+    url: "/",
   };
-  return await sendPushNotification(subscription, payload);
+  return await sendPushNotification(savedSubscription.subscription_data, payload);
 }

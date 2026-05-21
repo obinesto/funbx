@@ -1,6 +1,4 @@
 import { withSentryConfig } from "@sentry/nextjs";
-import withPWAInit from "next-pwa";
-import runtimeCaching from "next-pwa/cache.js";
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
@@ -14,6 +12,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "yt3.ggpht.com",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
       },
     ],
   },
@@ -31,27 +33,20 @@ const nextConfig = {
   },
 };
 
-const withPWA = withPWAInit({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  register: true,
-  skipWaiting: true,
-  runtimeCaching,
-  buildExcludes: [/middleware-manifest\.json$/], // Recommended for App Router
-});
-
-const configWithPwa = withPWA(nextConfig);
-
-export default withSentryConfig(configWithPwa, {
+export default withSentryConfig(nextConfig, {
   // Sentry options
   org: "cyprian-obi",
   project: "youtube-clone",
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  reactComponentAnnotation: {
-    enabled: true,
-  },
   tunnelRoute: "/monitoring",
-  disableLogger: true,
-  automaticVercelMonitors: true,
+  webpack: {
+    reactComponentAnnotation: {
+      enabled: true,
+    },
+    treeshake: {
+      removeDebugLogging: true,
+    },
+    automaticVercelMonitors: true,
+  },
 });

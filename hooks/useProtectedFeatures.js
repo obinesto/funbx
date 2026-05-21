@@ -193,3 +193,81 @@ export function useProtectedFeatures(videoId, channelId, channelTitle) {
       subscribeMutation.isLoading || isLoadingSubscriptionStatus,
   };
 }
+
+export function useVideoActions(videoId) {
+  const router = useRouter();
+  const { isAuthenticated, user, token } = useUserStore();
+  const userEmail = user?.email;
+
+  const likeMutation = useVideoLikeMutation();
+  const savedVideoMutation = useSavedVideoMutation();
+
+  const handleLike = useCallback(async (nextLiked) => {
+    if (!isAuthenticated) {
+      router.push("/auth");
+      return;
+    }
+
+    if (!userEmail || !videoId) {
+      console.error("Missing required data for like operation");
+      return;
+    }
+
+    try {
+      await likeMutation.mutateAsync({
+        videoId,
+        action: nextLiked ? "like" : "unlike",
+        email: userEmail,
+        token,
+      });
+    } catch (error) {
+      console.error("Error liking/unliking video:", error);
+      throw new Error("Failed to update like status. Try again later.");
+    }
+  }, [
+    isAuthenticated,
+    videoId,
+    likeMutation,
+    router,
+    userEmail,
+    token,
+  ]);
+
+  const handleSavedVideo = useCallback(async (nextSaved) => {
+    if (!isAuthenticated) {
+      router.push("/auth");
+      return;
+    }
+
+    if (!userEmail || !videoId) {
+      console.error("Missing required data for saved video operation");
+      return;
+    }
+
+    try {
+      await savedVideoMutation.mutateAsync({
+        videoId,
+        action: nextSaved ? "add" : "remove",
+        email: userEmail,
+        token,
+      });
+    } catch (error) {
+      console.error("Error adding/removing to saved videos:", error);
+      throw new Error("Failed to update saved video status. Try again later.");
+    }
+  }, [
+    isAuthenticated,
+    videoId,
+    savedVideoMutation,
+    router,
+    userEmail,
+    token,
+  ]);
+
+  return {
+    handleLike,
+    handleSavedVideo,
+    isLoadingLike: likeMutation.isLoading,
+    isLoadingSavedVideo: savedVideoMutation.isLoading,
+  };
+}

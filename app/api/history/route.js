@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { validateRequest } from '@/lib/utils/auth';
+import { validateRequest } from "@/lib/auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,26 +18,18 @@ export async function GET(request) {
     // Verify auth token
     const decodedToken = await validateRequest(request);
     if (!decodedToken) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
     if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" }, 
-        { status: 400 });
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     // Verify the email matches the token
     if (email !== decodedToken.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // First get the user_id
@@ -64,10 +56,7 @@ export async function GET(request) {
 
     return NextResponse.json({ watchHistory });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -76,25 +65,20 @@ export async function POST(request) {
     // Verify auth token
     const decodedToken = await validateRequest(request);
     if (!decodedToken) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { videoId, action, email } = await request.json();
     if (!videoId || !action || !email) {
       return NextResponse.json(
         { error: "VideoId, action, and email are required" },
-        { status: 400 });
+        { status: 400 },
+      );
     }
 
     // Verify the email matches the token
     if (email !== decodedToken.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // First get the user_id
@@ -110,15 +94,16 @@ export async function POST(request) {
 
     // Then insert or delete the video from watch history based on action
     if (action === "add") {
-      const { error } = await supabase
-        .from("watch_history")
-        .insert([{
+      const { error } = await supabase.from("watch_history").insert([
+        {
           user_id: user.id,
           video_id: videoId,
           created_at: new Date().toISOString(),
-        }]);
+        },
+      ]);
 
-      if (error?.code === "23505") { // Unique violation
+      if (error?.code === "23505") {
+        // Unique violation
         return NextResponse.json({ success: true }); // Already in watch history
       }
       if (error) throw error;
@@ -133,9 +118,7 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -144,25 +127,17 @@ export async function DELETE(request) {
     // Verify auth token
     const decodedToken = await validateRequest(request);
     if (!decodedToken) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { email } = await request.json();
     if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" }, 
-        { status: 400 });
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     // Verify the email matches the token
     if (email !== decodedToken.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // First get the user_id
@@ -188,9 +163,6 @@ export async function DELETE(request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

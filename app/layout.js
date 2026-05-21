@@ -1,10 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import NavBar from "@/components/NavBar";
-import SideBar from "@/components/SideBar";
-import Footer from "@/components/Footer";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import ModeToggle from "@/components/mode/ModeToggle";
-import PwaSetup from "./pwa/pwa";
+import NavBar from "@/components/global/NavBar";
+import SideBar from "@/components/global/SideBar";
+import DashboardShell from "@/components/global/DashboardShell";
+import ErrorBoundary from "@/components/global/ErrorBoundary";
+import ModeToggle from "@/components/global/ModeToggle";
+import PwaSetup from "./pwa";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { Analytics } from "@vercel/analytics/react";
@@ -68,24 +68,20 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link
-          rel="icon"
-          href="/icon?<generated>"
-          type="image/<generated>"
-          sizes="<generated>"
-        />
+        <meta name="theme-color" content="#000000" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden`}
       >
         <Providers>
           <ErrorBoundary>
             <NavBar />
             <div className="flex min-h-screen">
               <SideBar />
-              <main className="flex-1 ml-0 md:ml-64">{children}</main>
+              <DashboardShell>{children}</DashboardShell>
             </div>
-            <Footer />
             <div className="fixed bottom-4 right-4 z-50">
               <ModeToggle />
             </div>
