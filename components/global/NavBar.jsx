@@ -37,7 +37,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const NavBar = () => {
-  const { user, logout } = useUserStore();
+  const { user, logout, loading: authLoading } = useUserStore();
   const { isSidebarOpen, toggleSidebar } = useUIStore();
   const [query, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -300,6 +300,8 @@ const NavBar = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        ) : authLoading ? (
+          <Skeleton className="h-8 w-20 rounded-md" />
         ) : (
           <Link href="/auth">
             <Button

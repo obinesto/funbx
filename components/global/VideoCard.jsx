@@ -181,12 +181,12 @@ const VideoCard = ({
       href={`/video/${videoId}/${channelTittleFormatter()}`}
       ref={cardElementRef}
       id={`video-card-${videoId}`}
-      className="block transition-transform hover:scale-[1.02] duration-200"
+      className="block h-full transition-transform hover:scale-[1.02] duration-200"
       onMouseEnter={!isSmallScreen ? () => setIsHovered(true) : undefined}
       onMouseLeave={!isSmallScreen ? () => setIsHovered(false) : undefined}
     >
-      <Card className="h-[375px] md:h-[345px] overflow-hidden transition-shadow hover:shadow-lg relative">
-        <div className="relative aspect-video">
+      <Card className="relative grid h-full min-h-[340px] grid-rows-[auto_1fr] overflow-hidden transition-shadow hover:shadow-lg">
+        <div className="relative aspect-video shrink-0">
           {shouldShowVideo && isUserVideo ? (
             <video
               ref={videoRef}
@@ -268,38 +268,44 @@ const VideoCard = ({
             </DropdownMenu>
           )}
         </div>
-        <CardContent className="p-4">
-          <h3 className="text-xlg font-semibold line-clamp-2 hover:text-customRed">
-            {title}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">{channelTitle}</p>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-            {formattedViews && <span>{formattedViews} views</span>}
-            {formattedViews && formattedDate && <span>•</span>}
-            {formattedDate && <span>{formattedDate}</span>}
+        <CardContent className="grid min-h-0 grid-rows-[1fr_auto] p-4">
+          <div className="min-h-0">
+            <h3 className="min-h-12 text-base font-semibold leading-6 line-clamp-2 hover:text-customRed">
+              {title}
+            </h3>
+            <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+              {channelTitle}
+            </p>
+            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              {formattedViews && <span>{formattedViews} views</span>}
+              {formattedViews && formattedDate && <span>•</span>}
+              {formattedDate && (
+                <span className="line-clamp-1">{formattedDate}</span>
+              )}
+            </div>
+            {watchedAt && (
+              <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                Watched {formatDate(watchedAt)}
+              </span>
+            )}
+            {savedAt && (
+              <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                Saved {formatDate(savedAt)}
+              </span>
+            )}
+            {likedAt && (
+              <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                Liked {formatDate(likedAt)}
+              </span>
+            )}
           </div>
-          {watchedAt && (
-            <span className="text-sm text-muted-foreground">
-              Watched {formatDate(watchedAt)}
-            </span>
-          )}
-          {savedAt && (
-            <span className="text-sm text-muted-foreground">
-              Saved {formatDate(savedAt)}
-            </span>
-          )}
-          {likedAt && (
-            <span className="text-sm text-muted-foreground">
-              Liked {formatDate(likedAt)}
-            </span>
-          )}
 
           {/* Video actions */}
           <div
             className={
               isAuthenticated
-                ? "absolute bottom-0 right-0 flex items-center w-full justify-between"
-                : "absolute bottom-0 right-0 flex items-center w-full justify-end"
+                ? "flex items-center justify-between pt-3"
+                : "flex items-center justify-end pt-3"
             }
           >
             {isAuthenticated && (

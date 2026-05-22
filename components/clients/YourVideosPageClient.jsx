@@ -1,19 +1,49 @@
 "use client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Upload } from "lucide-react";
 import LoadingProtected from "@/components/global/LoadingProtected";
 import VideoCard from "@/components/global/VideoCard";
 import { useUserVideos } from "@/hooks/useQueries";
+import useUserStore from "@/hooks/useStore";
 import { useRouter } from "next/navigation";
 
-export default function YourVideosPage({ initialUserVideos = [] }) {
+export default function YourVideosPage({
+  initialUserVideos,
+  serverLoadError,
+}) {
   const router = useRouter();
-  const { data: userVideos, isLoading } = useUserVideos({
-    initialData: initialUserVideos,
-  });
+  const { loading: authLoading } = useUserStore();
+  const queryOptions = Array.isArray(initialUserVideos)
+    ? { initialData: initialUserVideos }
+    : {};
+  const {
+    data: userVideos,
+    isLoading,
+    error,
+  } = useUserVideos(queryOptions);
+  const showLoading = authLoading || isLoading;
 
-  if (isLoading) return <LoadingProtected />;
+  if (showLoading) return <LoadingProtected />;
+
+  if (error || (serverLoadError && !userVideos)) {
+    return (
+      <div className="p-4">
+        <h1 className="text-xl md:text-2xl font-bold text-customRed dark:text-customRed mb-6">
+          Your Videos
+        </h1>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-col items-center justify-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <span className="text-center">
+              Error loading your videos. Please try again later.
+            </span>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <section className="space-y-6">
@@ -25,7 +55,7 @@ export default function YourVideosPage({ initialUserVideos = [] }) {
           onClick={() => router.push("/studio/upload")}
           className="flex items-center gap-2"
         >
-          <Plus className="h-4 w-4" />
+          <Upload className="h-4 w-4" />
           Upload Video
         </Button>
       </div>
@@ -40,7 +70,7 @@ export default function YourVideosPage({ initialUserVideos = [] }) {
             onClick={() => router.push("/studio/upload")}
             className="flex items-center gap-2 mx-auto"
           >
-            <Plus className="h-4 w-4" />
+            <Upload className="h-4 w-4" />
             Upload Your First Video
           </Button>
         </Card>

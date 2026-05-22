@@ -10,6 +10,17 @@ export default async function YourVideosPage() {
     redirect("/auth?next=/your-videos");
   }
 
-  const userVideos = await getServerUserVideos();
-  return <YourVideosPageClient initialUserVideos={userVideos} />;
+  try {
+    const userVideos = await getServerUserVideos();
+    return <YourVideosPageClient initialUserVideos={userVideos} />;
+  } catch (error) {
+    console.error("Failed to preload user videos:", error);
+    return (
+      <YourVideosPageClient
+        serverLoadError={
+          error?.message || "Unable to preload your videos from the server."
+        }
+      />
+    );
+  }
 }
