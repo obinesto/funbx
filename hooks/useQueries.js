@@ -105,16 +105,10 @@ const fetchGuestFeed = async () => {
 };
 
 export const useFeed = (options = {}) => {
-  const { isAuthenticated, loading, token, user } = useUserStore();
-  const { enabled = true, ...queryOptions } = options;
-  const authStatus = loading
-    ? "pending"
-    : isAuthenticated
-      ? "authenticated"
-      : "guest";
+  const { isAuthenticated, token, user } = useUserStore();
 
   return useQuery({
-    queryKey: ["feed", { authStatus, userEmail: user?.email ?? null }],
+    queryKey: ["feed", { isAuthenticated }],
     queryFn: async () => {
       try {
         if (isAuthenticated && user?.email && token) {
@@ -242,8 +236,7 @@ export const useFeed = (options = {}) => {
     retry: (failureCount, error) => {
       return failureCount < 2 && !error.message.includes("quota exceeded");
     },
-    ...queryOptions,
-    enabled: enabled && !loading,
+    ...options,
   });
 };
 

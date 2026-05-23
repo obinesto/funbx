@@ -76,7 +76,7 @@ const SideBar = () => {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const { isSidebarOpen, closeSidebar } = useUIStore();
-  const { isAuthenticated, loading: authLoading } = useUserStore();
+  const { isAuthenticated } = useUserStore();
 
   const handleNavigation = () => {
     // Close sidebar on mobile after navigation
@@ -93,18 +93,18 @@ const SideBar = () => {
         className={cn(
           "flex items-center px-6 py-3 hover:bg-accent rounded-lg transition-colors cursor-pointer",
           pathname === item.link && "bg-accent",
-          item.requiresAuth && !authLoading && !isAuthenticated && "opacity-75"
+          item.requiresAuth && !isAuthenticated && "opacity-75"
         )}
       >
         <item.icon className="h-5 w-5 mr-4" />
         <span className="flex-1">{item.text}</span>
-        {item.requiresAuth && !authLoading && !isAuthenticated && (
+        {item.requiresAuth && !isAuthenticated && (
           <Lock className="h-4 w-4 text-muted-foreground" />
         )}
       </Link>
     );
 
-    if (item.requiresAuth && !authLoading && !isAuthenticated) {
+    if (item.requiresAuth && !isAuthenticated) {
       return (
         <TooltipProvider>
           <Tooltip>

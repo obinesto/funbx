@@ -9,14 +9,10 @@ import { AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export default function HomeFeedClient({ initialVideos = [] }) {
-  const { isAuthenticated, loading: authLoading } = useUserStore();
+  const { isAuthenticated } = useUserStore();
   const { data: videos, isLoading, isError, error } = useFeed({
-    initialData:
-      !authLoading && !isAuthenticated && initialVideos.length
-        ? initialVideos
-        : undefined,
+    initialData: !isAuthenticated && initialVideos.length ? initialVideos : undefined,
   });
-  const showLoading = authLoading || isLoading;
 
   if (isError) {
     return (
@@ -48,7 +44,7 @@ export default function HomeFeedClient({ initialVideos = [] }) {
         </h1>
       </Card>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {showLoading
+        {isLoading
           ? Array.from({ length: 12 }).map((_, index) => (
               <Card key={index} className="overflow-hidden">
                 <div className="relative aspect-video">

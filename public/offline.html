@@ -41,6 +41,25 @@
         color: color-mix(in srgb, CanvasText 70%, transparent);
         line-height: 1.5;
       }
+
+      a {
+        align-items: center;
+        background: #ff0033;
+        border-radius: 999px;
+        color: white;
+        display: inline-flex;
+        font-weight: 600;
+        justify-content: center;
+        margin-top: 1rem;
+        min-height: 44px;
+        padding: 0 1.25rem;
+        text-decoration: none;
+      }
+
+      a:focus-visible {
+        outline: 3px solid color-mix(in srgb, #ff0033 35%, CanvasText);
+        outline-offset: 3px;
+      }
     </style>
   </head>
   <body>
@@ -49,7 +68,12 @@
       <p>
         Reconnect to continue watching, searching, and managing your library.
       </p>
+      <a href="/">Back to homepage</a>
     </main>
+    <script>
+      window.addEventListener("online", () => {
+        window.location.replace("/");
+      });
+    </script>
   </body>
 </html>
-

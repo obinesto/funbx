@@ -46,7 +46,7 @@ export default function YourVideosPage({
   }
 
   return (
-    <section className="space-y-6">
+    <section className="min-h-full space-y-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-customRed dark:text-customRed">
           Your Videos

@@ -26,7 +26,7 @@ export function proxy(request) {
   if (!session) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/auth";
-    loginUrl.searchParams.set("next", pathname);
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 

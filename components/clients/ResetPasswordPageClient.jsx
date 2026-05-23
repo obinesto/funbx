@@ -44,7 +44,7 @@ export default function ResetPassword() {
     try {
       await resetPassword(email);
       setSuccessMessage(
-        "Password reset email sent. Please check your inbox (including spam folder)."
+        "If an account exists for that email, a reset link will be sent shortly."
       );
       setErrorMessage("");
     } catch (err) {

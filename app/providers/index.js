@@ -1,9 +1,36 @@
 "use client";
-import { useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { ThemeProvider } from "@/app/providers/ThemeProvider";
 import { AuthProvider } from "@/app/providers/AuthProvider";
 import { PromptProvider } from "@/app/providers/PromptProvider";
+
+if (typeof window !== "undefined") {
+  onlineManager.setOnline(window.navigator.onLine);
+}
+
+function NetworkQueryBridge() {
+  useEffect(() => {
+    const updateOnlineState = () => {
+      onlineManager.setOnline(navigator.onLine);
+    };
+
+    updateOnlineState();
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
+  }, []);
+
+  return null;
+}
 
 export function Providers({ children }) {
   const [queryClient] = useState(
@@ -21,6 +48,7 @@ export function Providers({ children }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <NetworkQueryBridge />
       <PromptProvider>
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>

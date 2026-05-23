@@ -11,12 +11,67 @@ const PRECACHE_URLS = [
   "/web-app-manifest-512x512.png",
 ];
 
+const PAGE_CACHE_URLS = [
+  "/",
+  "/auth",
+  "/auth/reset-password",
+  "/gaming",
+  "/history",
+  "/liked-videos",
+  "/movies",
+  "/music",
+  "/saved-videos",
+  "/settings",
+  "/studio/upload",
+  "/subscriptions",
+  "/trending",
+  "/your-videos",
+];
+
+async function cacheResponse(cacheName, request, response) {
+  if (!response?.ok || response.redirected) {
+    return;
+  }
+
+  const responseClone = response.clone();
+  const cache = await caches.open(cacheName);
+  await cache.put(request, responseClone);
+}
+
+async function warmPageCache() {
+  const cache = await caches.open(RUNTIME_CACHE);
+
+  await Promise.allSettled(
+    PAGE_CACHE_URLS.map(async (url) => {
+      const request = new Request(url, {
+        credentials: "same-origin",
+        redirect: "follow",
+      });
+      const response = await fetch(request);
+
+      if (response.ok && !response.redirected) {
+        await cache.put(request, response);
+      }
+    }),
+  );
+}
+
+async function getCachedNavigationResponse(request) {
+  const responses = await Promise.all([
+    caches.match(request),
+    caches.match(request, { ignoreSearch: true }),
+    caches.match(OFFLINE_URL),
+  ]);
+
+  return responses.find(Boolean);
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting()),
+    Promise.all([
+      caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS)),
+      warmPageCache(),
+    ]).then(() => self.skipWaiting()),
   );
 });
 
@@ -44,17 +99,51 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
+  if (url.origin !== self.location.origin) {
     return;
   }
 
-  if (request.mode === "navigate") {
+  const isNextRoutePayload =
+    request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");
+
+  if (request.mode === "navigate" || isNextRoutePayload) {
     event.respondWith(
       fetch(request)
+        .then((response) => {
+          cacheResponse(RUNTIME_CACHE, request, response);
+          return response;
+        })
         .catch(async () => {
-          return caches.match(OFFLINE_URL);
+          return getCachedNavigationResponse(request);
         }),
     );
+    return;
+  }
+
+  if (
+    url.pathname.startsWith("/api/youtube/") ||
+    url.pathname.startsWith("/api/search")
+  ) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          cacheResponse(RUNTIME_CACHE, request, response);
+          return response;
+        })
+        .catch(async () => {
+          return (
+            (await caches.match(request)) ||
+            new Response(JSON.stringify({ error: "Offline" }), {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            })
+          );
+        }),
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
     return;
   }
 
@@ -71,12 +160,7 @@ self.addEventListener("fetch", (event) => {
         }
 
         return fetch(request).then((response) => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches
-              .open(RUNTIME_CACHE)
-              .then((cache) => cache.put(request, responseClone));
-          }
+          cacheResponse(RUNTIME_CACHE, request, response);
           return response;
         });
       }),
@@ -118,8 +202,9 @@ self.addEventListener("notificationclick", (event) => {
   ).href;
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(
-      (clientList) => {
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
         for (const client of clientList) {
           if (client.url === targetUrl && "focus" in client) {
             return client.focus();
@@ -129,7 +214,6 @@ self.addEventListener("notificationclick", (event) => {
         if (self.clients.openWindow) {
           return self.clients.openWindow(targetUrl);
         }
-      },
-    ),
+      }),
   );
 });

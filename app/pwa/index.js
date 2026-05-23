@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useInstallPrompt } from "@/app/providers/PromptProvider";
 import {
   subscribeUser,
@@ -11,7 +11,16 @@ import useUserStore from "@/hooks/useStore";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bell, BellOff, Plus, Share, Smartphone, X } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  Plus,
+  Share,
+  Smartphone,
+  Wifi,
+  WifiOff,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 function urlBase64ToUint8Array(base64String) {
@@ -25,6 +34,95 @@ function urlBase64ToUint8Array(base64String) {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
+}
+
+function NetworkStatusNotice() {
+  const [notice, setNotice] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const hideTimerRef = useRef(null);
+
+  useEffect(() => {
+    const showNotice = (nextNotice) => {
+      window.clearTimeout(hideTimerRef.current);
+      setNotice(nextNotice);
+      setIsVisible(false);
+
+      window.requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+
+      hideTimerRef.current = window.setTimeout(() => {
+        setIsVisible(false);
+      }, 4000);
+    };
+
+    const handleOffline = () => {
+      showNotice({
+        type: "offline",
+        title: "You are offline",
+        message: "Cached pages and media remain available where possible.",
+      });
+    };
+
+    const handleOnline = () => {
+      showNotice({
+        type: "online",
+        title: "Back online",
+        message: "Fresh content and account actions are available again.",
+      });
+    };
+
+    if (!navigator.onLine) {
+      handleOffline();
+    }
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.clearTimeout(hideTimerRef.current);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
+
+  if (!notice) {
+    return null;
+  }
+
+  const isOnline = notice.type === "online";
+
+  return (
+    <div className="pointer-events-none fixed left-0 right-0 top-3 z-[80] flex justify-center px-4">
+      <div
+        className={`flex w-full max-w-md items-start gap-3 rounded-lg border bg-background px-4 py-3 text-foreground shadow-lg transition-all duration-300 ${
+          isVisible
+            ? "translate-y-0 opacity-100"
+            : "-translate-y-24 opacity-0"
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        <div
+          className={`mt-0.5 rounded-full p-2 ${
+            isOnline
+              ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
+              : "bg-customRed/10 text-customRed"
+          }`}
+        >
+          {isOnline ? (
+            <Wifi className="h-4 w-4" />
+          ) : (
+            <WifiOff className="h-4 w-4" />
+          )}
+        </div>
+        <div>
+          <p className="text-sm font-semibold">{notice.title}</p>
+          <p className="text-sm text-muted-foreground">{notice.message}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function InstallPrompt() {
@@ -299,9 +397,14 @@ export default function PwaSetup() {
   if (!isClient) return null;
 
   return (
-    <div className="fixed top-10 left-0 md:left-32 right-0 flex flex-col max-w-2xl mx-auto px-4 py-8">
-      <PushNotificationManager />
-      <InstallPrompt />
-    </div>
+    <>
+      <NetworkStatusNotice />
+      <div className="pointer-events-none fixed left-0 right-0 top-20 z-50 mx-auto flex max-w-2xl flex-col px-4 py-8 md:left-32">
+        <div className="pointer-events-auto">
+          <PushNotificationManager />
+          <InstallPrompt />
+        </div>
+      </div>
+    </>
   );
 }

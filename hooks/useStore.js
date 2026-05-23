@@ -19,19 +19,47 @@ import {
 
 const provider = new GoogleAuthProvider();
 
-async function syncSessionCookie(token) {
-  if (!token) return;
+const isBrowserOffline = () =>
+  typeof navigator !== "undefined" && navigator.onLine === false;
 
-  await fetch("/api/session", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ idToken: token }),
-  });
+async function syncSessionCookie(token, { required = false } = {}) {
+  if (!token) return false;
+
+  if (isBrowserOffline()) {
+    if (required) {
+      throw new Error("Network error. Check your connection and try again");
+    }
+    return false;
+  }
+
+  try {
+    const response = await fetch("/api/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken: token }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to sync session cookie");
+    }
+
+    return true;
+  } catch (error) {
+    if (required) {
+      throw error;
+    }
+    console.warn("Session cookie sync skipped:", error);
+    return false;
+  }
 }
 
 async function clearSessionCookie() {
+  if (isBrowserOffline()) {
+    return;
+  }
+
   await fetch("/api/session", {
     method: "DELETE",
   }).catch(() => {});
@@ -40,6 +68,7 @@ async function clearSessionCookie() {
 const useUserStore = create((set) => ({
   user: null,
   token: null,
+  sessionSynced: false,
   loading: true,
   error: null,
   isAuthenticated: false,
@@ -50,7 +79,13 @@ const useUserStore = create((set) => ({
     try {
       await signOut(auth);
       await clearSessionCookie();
-      set({ user: null, token: null, isAuthenticated: false, error: null });
+      set({
+        user: null,
+        token: null,
+        sessionSynced: false,
+        isAuthenticated: false,
+        error: null,
+      });
     } catch (error) {
       set({ error: error.message });
     }
@@ -58,6 +93,10 @@ const useUserStore = create((set) => ({
 
   loginWithGoogle: async () => {
     try {
+      if (isBrowserOffline()) {
+        throw new Error("Network error. Check your connection and try again");
+      }
+
       const result = await signInWithPopup(auth, provider);
       if (!result.user) {
         throw new Error("No user data returned from Google sign-in");
@@ -80,13 +119,17 @@ const useUserStore = create((set) => ({
         }
 
         const token = await result.user.getIdToken();
-        await syncSessionCookie(token);
+        const sessionSynced = await syncSessionCookie(token, {
+          required: true,
+        });
         set({
           user: result.user,
           token,
+          sessionSynced,
           error: null,
           isAuthenticated: true,
         });
+        return true;
       } catch (error) {
         console.error("Database operation failed:", error);
         // Sign the user out if there is no sync between firebase and database
@@ -98,6 +141,7 @@ const useUserStore = create((set) => ({
       set({
         user: null,
         token: null,
+        sessionSynced: false,
         error: error.message,
         isAuthenticated: false,
       });
@@ -108,6 +152,10 @@ const useUserStore = create((set) => ({
   signUpWithEmail: async (formData) => {
     const { email, password, username } = formData;
     try {
+      if (isBrowserOffline()) {
+        throw new Error("Network error. Check your connection and try again");
+      }
+
       const existingUser = await findUserByEmail(email);
       if (existingUser) {
         throw new Error("Email address already in use");
@@ -133,10 +181,11 @@ const useUserStore = create((set) => ({
       }
 
       const token = await result.user.getIdToken();
-      await syncSessionCookie(token);
+      const sessionSynced = await syncSessionCookie(token, { required: true });
       set({
         user: result.user,
         token,
+        sessionSynced,
         error: null,
         isAuthenticated: true,
       });
@@ -154,9 +203,13 @@ const useUserStore = create((set) => ({
 
   loginWithEmail: async (email, password) => {
     try {
+      if (isBrowserOffline()) {
+        throw new Error("Network error. Check your connection and try again");
+      }
+
       const user = await findUserByEmail(email);
       if (!user) {
-        throw new Error("No account exists with this email address");
+        throw new Error("Invalid email or password");
       }
 
       const result = await signInWithEmailAndPassword(auth, email, password);
@@ -167,58 +220,82 @@ const useUserStore = create((set) => ({
       }
 
       const token = await result.user.getIdToken();
-      await syncSessionCookie(token);
+      const sessionSynced = await syncSessionCookie(token, { required: true });
       set({
         user: result.user,
         token,
+        sessionSynced,
         error: null,
         isAuthenticated: true,
       });
     } catch (error) {
-      let errorMessage = error.message;
-      if (error.code === "auth/wrong-password") {
-        errorMessage = "Invalid password";
-      } else if (error.code === "auth/user-not-found") {
-        errorMessage = "No account exists with this email address";
+      let errorMessage = "Invalid email or password";
+
+      if (error.code === "auth/invalid-email") {
+        errorMessage = "Enter a valid email address";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many attempts. Please try again later";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Check your connection and try again";
       }
+
       set({ error: errorMessage });
-      throw error;
+      throw new Error(errorMessage);
     }
   },
 
   resetPassword: async (email) => {
     try {
-      const user = await findUserByEmail(email);
-      if (!user) {
-        throw new Error("No account exists with this email address");
+      if (isBrowserOffline()) {
+        throw new Error("Network error. Check your connection and try again");
       }
 
-      await sendPasswordResetEmail(auth, email);
+      const user = await findUserByEmail(email);
+      if (user) {
+        await sendPasswordResetEmail(auth, email);
+      }
+
       set({ error: null });
     } catch (error) {
-      let errorMessage = "Failed to send reset email";
+      let errorMessage = "Unable to send reset email. Please try again later";
 
-      if (error.message === "No account exists with this email address") {
-        errorMessage = error.message;
-      } else {
-        switch (error.code) {
-          case "auth/user-not-found":
-            errorMessage = "No account exists with this email address";
-            break;
-          case "auth/invalid-email":
-            errorMessage = "Invalid email address";
-            break;
-          case "auth/too-many-requests":
-            errorMessage = "Too many attempts. Please try again later";
-            break;
-          default:
-            errorMessage = error.message;
-        }
+      switch (error.code) {
+        case "auth/invalid-email":
+          errorMessage = "Enter a valid email address";
+          break;
+        case "auth/too-many-requests":
+          errorMessage = "Too many attempts. Please try again later";
+          break;
+        case "auth/network-request-failed":
+          errorMessage = "Network error. Check your connection and try again";
+          break;
       }
 
       set({ error: errorMessage });
-      throw error;
+      throw new Error(errorMessage);
     }
+  },
+
+  refreshSession: async () => {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      return false;
+    }
+
+    const token = await currentUser.getIdToken();
+    const sessionSynced = await syncSessionCookie(token, { required: true });
+
+    useUserStore.setState({
+      user: currentUser,
+      token,
+      sessionSynced,
+      loading: false,
+      isAuthenticated: true,
+      error: null,
+    });
+
+    return sessionSynced;
   },
 
   clearError: () => set({ error: null }),
@@ -227,15 +304,28 @@ const useUserStore = create((set) => ({
 // auth state listener
 onIdTokenChanged(auth, async (currentUser) => {
   if (currentUser) {
+    if (isBrowserOffline()) {
+      useUserStore.setState((state) => ({
+        user: currentUser,
+        token: state.token || currentUser.accessToken || null,
+        sessionSynced: state.sessionSynced,
+        loading: false,
+        isAuthenticated: true,
+        error: null,
+      }));
+      return;
+    }
+
     try {
       const token = await currentUser.getIdToken();
-      await syncSessionCookie(token);
+      const sessionSynced = await syncSessionCookie(token);
       // If getIdToken() succeeds, Firebase has handled token refresh if needed.
       // The token is valid.
       if (token) {
         useUserStore.setState({
           user: currentUser,
           token,
+          sessionSynced,
           loading: false,
           isAuthenticated: true,
           error: null,
@@ -253,6 +343,7 @@ onIdTokenChanged(auth, async (currentUser) => {
       useUserStore.setState({
         user: null,
         token: null,
+        sessionSynced: false,
         loading: false,
         isAuthenticated: false,
         error:
@@ -260,15 +351,53 @@ onIdTokenChanged(auth, async (currentUser) => {
       });
     }
   } else {
+    if (isBrowserOffline()) {
+      useUserStore.setState((state) => ({
+        user: state.user,
+        token: state.token,
+        sessionSynced: state.sessionSynced,
+        loading: false,
+        isAuthenticated: Boolean(state.user),
+        error: null,
+      }));
+      return;
+    }
+
     await clearSessionCookie();
     useUserStore.setState({
       user: null,
       token: null,
+      sessionSynced: false,
       loading: false,
       isAuthenticated: false,
       error: null,
     });
   }
 });
+
+if (typeof window !== "undefined") {
+  window.addEventListener("online", async () => {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      return;
+    }
+
+    try {
+      const token = await currentUser.getIdToken();
+      const sessionSynced = await syncSessionCookie(token);
+      useUserStore.setState({
+        user: currentUser,
+        token,
+        sessionSynced,
+        loading: false,
+        isAuthenticated: true,
+        error: null,
+      });
+    } catch (error) {
+      console.warn("Failed to refresh session after reconnect:", error);
+    }
+  });
+}
 
 export default useUserStore;

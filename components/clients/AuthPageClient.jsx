@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import useUserStore from "@/hooks/useStore";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const getSafeNextPath = (nextPath) => {
+  if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//")) {
+    return "/";
+  }
+
+  return nextPath;
+};
+
 export default function Auth() {
   const [formData, setFormData] = useState({
     email: "",
@@ -34,27 +42,59 @@ export default function Auth() {
     loginWithGoogle,
     error,
     isAuthenticated,
+    sessionSynced,
+    refreshSession,
+    clearError: clearStoreError,
   } = useUserStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = getSafeNextPath(searchParams.get("next"));
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, router]);
+    let isMounted = true;
+
+    const finishAuthenticatedRedirect = async () => {
+      if (!isAuthenticated) {
+        return;
+      }
+
+      if (sessionSynced || !navigator.onLine) {
+        router.replace(nextPath);
+        return;
+      }
+
+      try {
+        const didSync = await refreshSession();
+        if (isMounted && didSync) {
+          router.replace(nextPath);
+        }
+      } catch (error) {
+        setErrorMessage(
+          error.message || "Unable to finish sign in. Please try again.",
+        );
+      }
+    };
+
+    finishAuthenticatedRedirect();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, nextPath, refreshSession, router, sessionSynced]);
 
   const clearError = useCallback(() => {
     const timer = setTimeout(() => {
       setErrorMessage("");
-    }, 4000);
+      clearStoreError();
+    }, 5000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [clearStoreError]);
 
   useEffect(() => {
-    if (errorMessage) {
+    if (errorMessage || error) {
       clearError();
     }
-  }, [errorMessage, clearError]);
+  }, [errorMessage, error, clearError]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -84,9 +124,7 @@ export default function Auth() {
         await loginWithEmail(formData.email, formData.password);
       }
 
-      if (!error) {
-        router.push("/");
-      }
+      router.replace(nextPath);
     } catch (err) {
       setErrorMessage(err.message || "Authentication failed");
     } finally {
@@ -98,16 +136,32 @@ export default function Auth() {
     setSubmitLoader(true);
     setErrorMessage("");
     try {
-      await loginWithGoogle();
-      if (!error) {
-        router.push("/");
+      const didLogin = await loginWithGoogle();
+      if (didLogin === false) {
+        throw new Error(error || "Authentication failed");
       }
+      router.replace(nextPath);
     } catch (err) {
       setErrorMessage(err.message || "Authentication failed");
     } finally {
       setSubmitLoader(false);
     }
   };
+
+  if (isAuthenticated && !errorMessage) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-customRed" />
+          <p className="text-sm text-muted-foreground">
+            {sessionSynced || !navigator.onLine
+              ? "Taking you back to your page..."
+              : "Finishing sign in..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center bg-background">
