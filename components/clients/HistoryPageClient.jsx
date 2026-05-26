@@ -1,29 +1,30 @@
 "use client";
+import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import LoadingProtected from "@/components/global/LoadingProtected";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import VideoCard from "@/components/global/VideoCard";
 import { AlertTriangle } from "lucide-react";
-import { useWatchHistory, useClearHistory } from "@/hooks/useQueries";
-import { getVideoCardProps } from "@/lib/video-card";
+import { getVideoCardProps } from "@/utils/videoCard";
+import { clearWatchHistoryAction } from "@/lib/server/protectedActions";
 
 export default function HistoryPage({ initialWatchHistory = [] }) {
-  const { data: watchHistory, isLoading, error } = useWatchHistory({
-    initialData: initialWatchHistory,
-  });
-  const clearHistoryMutation = useClearHistory();
+  const [watchHistory, setWatchHistory] = useState(initialWatchHistory);
+  const [error, setError] = useState(null);
+  const [isPending, startTransition] = useTransition();
 
-  const handleClearHistory = async () => {
-    try {
-      await clearHistoryMutation.mutateAsync();
-    } catch (error) {
-      console.error("Failed to clear history:", error);
-    }
+  const handleClearHistory = () => {
+    startTransition(async () => {
+      try {
+        await clearWatchHistoryAction();
+        setWatchHistory([]);
+      } catch (error) {
+        console.error("Failed to clear history:", error);
+        setError(error);
+      }
+    });
   };
-
-  if (isLoading) return <LoadingProtected />;
 
   if (error) {
     return (
@@ -65,10 +66,10 @@ export default function HistoryPage({ initialWatchHistory = [] }) {
           <Button
             variant="destructive"
             onClick={handleClearHistory}
-            disabled={clearHistoryMutation.isLoading}
+            disabled={isPending}
             className="flex items-center gap-2"
           >
-            {clearHistoryMutation.isLoading ? (
+            {isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Trash2 className="h-4 w-4" />

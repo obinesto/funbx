@@ -15,8 +15,8 @@ import {
   Bookmark,
   ThumbsUp,
 } from "lucide-react";
-import useUserStore from "@/hooks/useStore";
-import useUIStore from "@/hooks/useUIStore";
+import authStore from "@/store/authStore";
+import useUIStore from "@/store/sidebarStore";
 import { useSearchVideos } from "@/hooks/useQueries";
 import {
   DropdownMenu,
@@ -37,7 +37,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const NavBar = () => {
-  const { user, logout } = useUserStore();
+  const { user, logout } = authStore();
   const { isSidebarOpen, toggleSidebar } = useUIStore();
   const [query, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -90,7 +90,7 @@ const NavBar = () => {
         </Button>
         <Link href="/" className="flex items-center">
           <span className="text-lg sm:text-xl md:text-2xl font-bold text-customRed whitespace-nowrap">
-            YouTube Clone
+            FunBx
           </span>
         </Link>
       </div>

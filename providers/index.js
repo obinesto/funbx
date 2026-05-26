@@ -5,9 +5,9 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { ThemeProvider } from "@/app/providers/ThemeProvider";
-import { AuthProvider } from "@/app/providers/AuthProvider";
-import { PromptProvider } from "@/app/providers/PromptProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { PromptProvider } from "@/providers/PromptProvider";
 
 if (typeof window !== "undefined") {
   onlineManager.setOnline(window.navigator.onLine);

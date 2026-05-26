@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 
 const MAX_VIDEO_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_VIDEO_FILE_SIZE_MB = 50;
@@ -19,7 +19,7 @@ const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/x-matroska"];
 export default function UploadPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isAuthenticated, user, token, loading } = useUserStore();
+  const { isAuthenticated, user, token, loading } = authStore();
   const [videoFile, setVideoFile] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

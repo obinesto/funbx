@@ -1,6 +1,6 @@
 import YourVideosPageClient from "@/components/clients/YourVideosPageClient";
-import { getCurrentUser } from "@/lib/auth";
-import { getServerUserVideos } from "@/lib/server/protected-data";
+import { getCurrentUser } from "@/lib/authConfig";
+import { getServerUserVideos } from "@/lib/server/protectedData";
 import { redirect } from "next/navigation";
 
 export default async function YourVideosPage() {

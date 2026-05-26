@@ -1,6 +1,6 @@
 import SavedVideosPageClient from "@/components/clients/SavedVideosPageClient";
-import { getCurrentUser } from "@/lib/auth";
-import { getServerSavedVideos } from "@/lib/server/protected-data";
+import { getCurrentUser } from "@/lib/authConfig";
+import { getServerSavedVideos } from "@/lib/server/protectedData";
 import { redirect } from "next/navigation";
 
 export default async function SavedVideosPage() {

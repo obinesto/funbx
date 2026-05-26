@@ -2,25 +2,12 @@ import { cache } from "react";
 import VideoPageClient from "@/components/clients/videoPageClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseConfig";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const isUuid = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value
   );
-
-const supabase =
-  supabaseUrl && supabaseServiceKey
-    ? createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-          detectSessionInUrl: false,
-        },
-      })
-    : null;
 
 const toHttpsUrl = (url) =>
   typeof url === "string" ? url.replace(/^http:\/\//, "https://") : url;
@@ -158,7 +145,7 @@ export async function generateMetadata({ params }) {
   return {
     title: videoData.snippet.title,
     description: videoData.snippet.description.substring(0, 200),
-    creator: videoData.snippet.channelTitle || "Cyprian Obi",
+    creator: videoData.snippet.channelTitle || "FunBx",
     keywords: [
       videoData.snippet.title,
       videoData.snippet.channelTitle,

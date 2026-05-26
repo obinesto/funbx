@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useInstallPrompt } from "@/app/providers/PromptProvider";
+import { useInstallPrompt } from "@/providers/PromptProvider";
 import {
   subscribeUser,
   unsubscribeUser,
   sendTestNotificationToUser,
 } from "./actions";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,7 +140,7 @@ function InstallPrompt() {
       <div className="flex items-center gap-3 mb-4">
         <Smartphone className="h-5 w-5" />
         <h3 className="text-lg font-semibold w-full justify-between">
-          Install YouTube Clone App
+          Install FunBx App
         </h3>
         <Button onClick={dismissInstallPrompt}>
           <X />
@@ -189,7 +189,7 @@ function PushNotificationManager() {
     unsubscribe: false,
     test: false,
   });
-  const { user, token } = useUserStore();
+  const { user, token } = authStore();
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") {

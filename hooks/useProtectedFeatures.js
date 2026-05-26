@@ -1,19 +1,11 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import useUserStore from "./useStore";
+import authStore from "@/store/authStore";
+
 import {
-  // Queries
-  useWatchHistory,
-  useLikedVideos,
-  useSavedVideos,
-  useUserVideos,
-  useSubscriptions,
-  // Mutations
   useVideoLikeMutation,
   useSavedVideoMutation,
-  useVideoMutation,
   useSubscribeMutation,
-  // Status Queries
   useIsVideoLiked,
   useIsInSavedVideos,
   useIsSubscribed,
@@ -21,25 +13,13 @@ import {
 
 export function useProtectedFeatures(videoId, channelId, channelTitle) {
   const router = useRouter();
-  const { isAuthenticated, user, token } = useUserStore();
+  const { isAuthenticated, user, token } = authStore();
   const userEmail = user?.email;
 
-  // Queries
-  const { data: watchHistory, isLoading: isLoadingHistory } = useWatchHistory();
-  const { data: likedVideos, isLoading: isLoadingLikes } = useLikedVideos();
-  const { data: savedVideos, isLoading: isLoadingSavedVideos } =
-    useSavedVideos();
-  const { data: userVideos, isLoading: isLoadingUserVideos } = useUserVideos();
-  const { data: subscriptions, isLoading: isLoadingSubscriptions } =
-    useSubscriptions();
-
-  // Mutations
   const likeMutation = useVideoLikeMutation();
   const savedVideoMutation = useSavedVideoMutation();
-  const videoMutation = useVideoMutation();
   const subscribeMutation = useSubscribeMutation();
 
-  // Specific Status Queries
   const { data: isLikedData, isLoading: isLoadingLikeStatus } =
     useIsVideoLiked(videoId);
   const { data: isInSavedVideosData, isLoading: isLoadingSavedVideoStatus } =
@@ -146,43 +126,11 @@ export function useProtectedFeatures(videoId, channelId, channelTitle) {
     token,
   ]);
 
-  const handleVideoAction = useCallback(
-    async (type, actionVideoId, data) => {
-      if (!isAuthenticated) {
-        router.push("/auth");
-        return;
-      }
-      if (!videoMutation) {
-        console.error("videoMutation is not available");
-        return;
-      }
-      return videoMutation.mutateAsync({ type, videoId: actionVideoId, data });
-    },
-    [isAuthenticated, videoMutation, router]
-  );
-
   return {
-    // Data
-    watchHistory,
-    likedVideos,
-    savedVideos,
-    userVideos,
-    subscriptions,
-
-    // Loading states
-    isLoadingHistory,
-    isLoadingLikes,
-    isLoadingSavedVideos,
-    isLoadingUserVideos,
-    isLoadingSubscriptions,
-
-    // Action handlers
     handleLike,
     handleSavedVideo,
-    handleVideoAction,
     handleSubscribe,
 
-    // Like and Watch Later status
     isLiked: isLikedData ?? false,
     isSaved: isInSavedVideosData ?? false,
     isSubscribed: isSubscribedData ?? false,
@@ -196,7 +144,7 @@ export function useProtectedFeatures(videoId, channelId, channelTitle) {
 
 export function useVideoActions(videoId) {
   const router = useRouter();
-  const { isAuthenticated, user, token } = useUserStore();
+  const { isAuthenticated, user, token } = authStore();
   const userEmail = user?.email;
 
   const likeMutation = useVideoLikeMutation();

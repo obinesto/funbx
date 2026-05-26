@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 import { WifiOff } from "lucide-react";
 
 // Routes that require authentication
@@ -17,7 +17,7 @@ const protectedRoutes = [
 ];
 
 export function AuthProvider({ children }) {
-  const { isAuthenticated, loading, token } = useUserStore();
+  const { isAuthenticated, loading, token } = authStore();
   const [isOnline, setIsOnline] = useState(true);
   const pathname = usePathname();
   const router = useRouter();

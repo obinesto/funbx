@@ -17,6 +17,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
+      {
+        protocol: "https",
+        hostname: "games.assets.gamepix.com",
+      },
     ],
   },
   async headers() {
@@ -36,7 +40,7 @@ const nextConfig = {
 export default withSentryConfig(nextConfig, {
   // Sentry options
   org: "cyprian-obi",
-  project: "youtube-clone",
+  project: "funbx",
   silent: !process.env.CI,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",

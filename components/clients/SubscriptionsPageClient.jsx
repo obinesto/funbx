@@ -1,16 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import {
-  useSubscriptions,
-  useSubscribeMutation,
-  useChannelInfo,
-} from "@/hooks/useQueries";
+import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
-import LoadingProtected from "@/components/global/LoadingProtected";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import VideoCard from "@/components/global/VideoCard";
 import {
@@ -20,28 +14,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { setSubscriptionAction } from "@/lib/server/protectedActions";
 
 export default function SubscriptionsPage({
   initialSubscriptions = [],
   initialChannelData = [],
 }) {
-  const { data: subscriptions, isLoading, error } = useSubscriptions({
-    initialData: initialSubscriptions,
-  });
-  const {
-    data: channelData,
-    isLoading: isLoadingChannelData,
-    error: ChannelDataError,
-  } = useChannelInfo(subscriptions || [], {
-    initialData: initialChannelData,
-  });
-  const unsubscribeMutation = useSubscribeMutation();
+  const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
+  const [channelData, setChannelData] = useState(initialChannelData);
+  const [error, setError] = useState(null);
+  const [isPending, startTransition] = useTransition();
   const [sortOrders, setSortOrders] = useState({});
   const [showChannelVideos, setShowChannelVideos] = useState({});
 
-  if (isLoading || isLoadingChannelData) return <LoadingProtected />;
-
-  if (error || ChannelDataError) {
+  if (error) {
     return (
       <div className="p-4">
         <h1 className="text-3xl font-bold mb-6">Subscriptions</h1>
@@ -68,14 +54,22 @@ export default function SubscriptionsPage({
   }
 
   const handleUnsubscribe = async (channelId) => {
-    try {
-      await unsubscribeMutation.mutateAsync({
-        channelId,
-        action: "remove",
-      });
-    } catch (error) {
-      console.error("Failed to unsubscribe:", error);
-    }
+    startTransition(async () => {
+      try {
+        await setSubscriptionAction(channelId, undefined, "remove");
+        setSubscriptions((currentSubscriptions) =>
+          currentSubscriptions.filter((item) => item.channel_id !== channelId),
+        );
+        setChannelData((currentChannelData) =>
+          currentChannelData.filter(
+            (item) => item?.channelInfo?.channel_id !== channelId,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to unsubscribe:", error);
+        setError(error);
+      }
+    });
   };
 
   const handleSortChange = (channelId, value) => {
@@ -197,7 +191,7 @@ export default function SubscriptionsPage({
                           onClick={() =>
                             handleUnsubscribe(channelInfo.channel_id)
                           }
-                          disabled={unsubscribeMutation.isLoading}
+                          disabled={isPending}
                         >
                           Unsubscribe
                         </Button>

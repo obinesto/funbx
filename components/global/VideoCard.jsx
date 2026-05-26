@@ -10,14 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import { toast } from "sonner";
-import { formatDate, formatDuration } from "@/lib/dateFormat";
+import { formatDate, formatDuration } from "@/utils/dateFormat";
 import { useEffect, useRef, useState } from "react";
 import { ThumbsUp, Bookmark, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { PiShareFatBold } from "react-icons/pi";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 import { useVideoActions } from "@/hooks/useProtectedFeatures";
 import { useVideoMutation } from "@/hooks/useQueries";
-import usePlayerStore from "@/hooks/usePlayerStore";
+import usePlayerStore from "@/store/playerStore";
 import DeleteVideoDialog from "@/components/global/DeleteVideoDialog";
 
 const VideoCard = ({
@@ -34,8 +34,11 @@ const VideoCard = ({
   isOwner,
   isUserVideo,
   videoUrl,
+  onLikeChange,
+  onSavedChange,
+  onDeleted,
 }) => {
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated } = authStore();
   const videoMutation = useVideoMutation();
   const { activePlayerId, setActivePlayer, clearActivePlayer } =
     usePlayerStore();
@@ -169,6 +172,7 @@ const VideoCard = ({
     try {
       await videoMutation.mutateAsync({ type: "delete", videoId });
       toast("Video deleted");
+      onDeleted?.();
       setIsDeleteOpen(false);
     } catch (error) {
       toast(error.message || "Failed to delete video");
@@ -324,6 +328,7 @@ const VideoCard = ({
 
                     try {
                       await handleLike(nextLiked);
+                      onLikeChange?.(nextLiked);
                     } catch (error) {
                       toast(error.message);
                       setUpdateLike((prev) => !prev);
@@ -352,6 +357,7 @@ const VideoCard = ({
                     setUpdateSavedVideo(nextSaved);
                     try {
                       await handleSavedVideo(nextSaved);
+                      onSavedChange?.(nextSaved);
                     } catch (error) {
                       console.error(
                         "Error updating saved video status:",

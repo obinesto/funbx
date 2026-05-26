@@ -1,10 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from 'cloudinary';
-import { validateRequest } from '@/lib/auth';
+import { validateRequest } from '@/lib/authConfig';
+import { supabase } from "@/lib/supabaseConfig";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MAX_VIDEO_FILE_SIZE = 50 * 1024 * 1024;
 
 // Configure Cloudinary
@@ -12,15 +10,6 @@ cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// Initialize Supabase client
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-    detectSessionInUrl: false,
-  },
 });
 
 export async function GET(request) {
@@ -158,7 +147,7 @@ export async function POST(request) {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           resource_type: "video",
-          folder: "Youtube Clone",
+          folder: "FunBx",
           eager: [
             { format: 'jpg', transformation: [
               { width: 1280, height: 720, crop: 'fill' },

@@ -1,9 +1,9 @@
 import SubscriptionsPageClient from "@/components/clients/SubscriptionsPageClient";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/authConfig";
 import {
   getServerChannelInfo,
   getServerSubscriptions,
-} from "@/lib/server/protected-data";
+} from "@/lib/server/protectedData";
 import { redirect } from "next/navigation";
 
 export default async function SubscriptionsPage() {

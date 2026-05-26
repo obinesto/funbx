@@ -1,12 +1,8 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
-import { sendPushNotification } from "@/lib/pushNotification";
-import { auth } from "@/lib/firebase-admin";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { sendPushNotification } from "@/utils/pushNotification";
+import { auth } from "@/lib/firebase/firebaseAdmin";
+import { supabase } from "@/lib/supabaseConfig";
 
 async function getVerifiedUser(token) {
   if (!token) {

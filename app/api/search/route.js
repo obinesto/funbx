@@ -1,10 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import axios from "axios";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { supabase } from "@/lib/supabaseConfig";
 
 const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3";
 

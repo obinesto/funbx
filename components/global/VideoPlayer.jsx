@@ -6,12 +6,12 @@ import { Play, Pause, Volume2, VolumeX, Maximize } from "lucide-react";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 import { useAddToHistory } from "@/hooks/useQueries";
 
 const VideoPlayer = ({ videoId, isUserVideo = false, videoUrl }) => {
   const { isAPIReady, error: apiError } = useYouTubePlayer();
-  const { isAuthenticated, user } = useUserStore();
+  const { isAuthenticated, user } = authStore();
   const addToHistory = useAddToHistory();
 
   const playerRef = useRef(null);

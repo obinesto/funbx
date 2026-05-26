@@ -1,5 +1,6 @@
-const STATIC_CACHE = "youtube-clone-static-v1";
-const RUNTIME_CACHE = "youtube-clone-runtime-v1";
+const STATIC_CACHE = "funbx-static-v1";
+const RUNTIME_CACHE = "funbx-runtime-v1";
+const RSC_CACHE = "funbx-rsc-v1";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_URLS = [
@@ -56,10 +57,23 @@ async function warmPageCache() {
   );
 }
 
-async function getCachedNavigationResponse(request) {
+async function getCachedNavigationResponse(request, isNextRoutePayload) {
+  if (isNextRoutePayload) {
+    return (
+      (await caches.match(request)) ||
+      new Response(null, {
+        status: 503,
+        statusText: "Offline",
+      })
+    );
+  }
+
+  const url = new URL(request.url);
+  const pathOnlyUrl = new URL(url.pathname, self.location.origin);
+
   const responses = await Promise.all([
     caches.match(request),
-    caches.match(request, { ignoreSearch: true }),
+    caches.match(pathOnlyUrl.href),
     caches.match(OFFLINE_URL),
   ]);
 
@@ -82,7 +96,12 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== STATIC_CACHE && key !== RUNTIME_CACHE)
+            .filter(
+              (key) =>
+                key !== STATIC_CACHE &&
+                key !== RUNTIME_CACHE &&
+                key !== RSC_CACHE,
+            )
             .map((key) => caches.delete(key)),
         ),
       )
@@ -110,11 +129,17 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          cacheResponse(RUNTIME_CACHE, request, response);
+          event.waitUntil(
+            cacheResponse(
+              isNextRoutePayload ? RSC_CACHE : RUNTIME_CACHE,
+              request,
+              response,
+            ),
+          );
           return response;
         })
         .catch(async () => {
-          return getCachedNavigationResponse(request);
+          return getCachedNavigationResponse(request, isNextRoutePayload);
         }),
     );
     return;
@@ -122,12 +147,13 @@ self.addEventListener("fetch", (event) => {
 
   if (
     url.pathname.startsWith("/api/youtube/") ||
-    url.pathname.startsWith("/api/search")
+    url.pathname.startsWith("/api/search") ||
+    url.pathname.startsWith("/api/games")
   ) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          cacheResponse(RUNTIME_CACHE, request, response);
+          event.waitUntil(cacheResponse(RUNTIME_CACHE, request, response));
           return response;
         })
         .catch(async () => {
@@ -160,7 +186,7 @@ self.addEventListener("fetch", (event) => {
         }
 
         return fetch(request).then((response) => {
-          cacheResponse(RUNTIME_CACHE, request, response);
+          event.waitUntil(cacheResponse(RUNTIME_CACHE, request, response));
           return response;
         });
       }),
@@ -179,12 +205,12 @@ self.addEventListener("push", (event) => {
     }
   }
 
-  const title = payload.title || "YouTube Clone";
+  const title = payload.title || "FunBx";
   const options = {
     body: payload.body || "You have a new notification.",
     icon: payload.icon || "/web-app-manifest-192x192.png",
     badge: payload.badge || "/web-app-manifest-192x192.png",
-    tag: payload.tag || "youtube-clone-notification",
+    tag: payload.tag || "funbx-notification",
     data: {
       url: payload.url || "/",
     },

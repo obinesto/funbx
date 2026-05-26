@@ -1,12 +1,12 @@
 "use client";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Upload } from "lucide-react";
 import LoadingProtected from "@/components/global/LoadingProtected";
 import VideoCard from "@/components/global/VideoCard";
-import { useUserVideos } from "@/hooks/useQueries";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 import { useRouter } from "next/navigation";
 
 export default function YourVideosPage({
@@ -14,20 +14,13 @@ export default function YourVideosPage({
   serverLoadError,
 }) {
   const router = useRouter();
-  const { loading: authLoading } = useUserStore();
-  const queryOptions = Array.isArray(initialUserVideos)
-    ? { initialData: initialUserVideos }
-    : {};
-  const {
-    data: userVideos,
-    isLoading,
-    error,
-  } = useUserVideos(queryOptions);
-  const showLoading = authLoading || isLoading;
+  const { loading: authLoading } = authStore();
+  const [userVideos, setUserVideos] = useState(initialUserVideos || []);
+  const showLoading = authLoading;
 
   if (showLoading) return <LoadingProtected />;
 
-  if (error || (serverLoadError && !userVideos)) {
+  if (serverLoadError) {
     return (
       <div className="p-4">
         <h1 className="text-xl md:text-2xl font-bold text-customRed dark:text-customRed mb-6">
@@ -77,7 +70,16 @@ export default function YourVideosPage({
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {userVideos.map((video) => (
-            <VideoCard key={video.id} {...video} isOwner={true} />
+            <VideoCard
+              key={video.id}
+              {...video}
+              isOwner={true}
+              onDeleted={() => {
+                setUserVideos((currentVideos) =>
+                  currentVideos.filter((item) => item.id !== video.id),
+                );
+              }}
+            />
           ))}
         </div>
       )}

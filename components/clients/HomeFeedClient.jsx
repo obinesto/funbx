@@ -1,7 +1,7 @@
 "use client";
 
 import { useFeed } from "@/hooks/useQueries";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 import VideoCard from "@/components/global/VideoCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,7 +9,7 @@ import { AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export default function HomeFeedClient({ initialVideos = [] }) {
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated } = authStore();
   const { data: videos, isLoading, isError, error } = useFeed({
     initialData: !isAuthenticated && initialVideos.length ? initialVideos : undefined,
   });

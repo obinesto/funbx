@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
+
 import {
   Bell,
   ThumbsUp,
@@ -18,19 +19,21 @@ import {
 } from "lucide-react";
 import { PiShareFatBold } from "react-icons/pi";
 import { useProtectedFeatures } from "@/hooks/useProtectedFeatures";
-import { formatViews, formatDate } from "@/lib/dateFormat";
+import { formatViews, formatDate } from "@/utils/dateFormat";
 import RelatedVideos from "@/components/global/RelatedVideos";
 import { useVideoDetails } from "@/hooks/useQueries";
 
 export default function VideoPageClient({ videoId, initialVideoData, error }) {
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated } = authStore();
   const initialIsUserVideo = Boolean(initialVideoData?.isUserVideo);
 
   const {
     data: video,
     isError: isVideoErrorHook,
     error: videoErrorHook,
-  } = useVideoDetails(videoId, { enabled: !initialIsUserVideo });
+  } = useVideoDetails(videoId, {
+    enabled: !initialVideoData && !initialIsUserVideo,
+  });
 
   const channelId = video?.snippet?.channelId;
 

@@ -1,17 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { validateRequest } from "@/lib/auth";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-    detectSessionInUrl: false,
-  },
-});
+import { validateRequest } from "@/lib/authConfig";
+import { supabase } from "@/lib/supabaseConfig";
 
 export async function GET(request) {
   try {
@@ -53,7 +42,7 @@ export async function GET(request) {
         .eq("user_id", user.id)
         .eq("channel_id", channelId);
 
-      if (isSubscribedError && isSubscribedError !== "PGRST116") {
+      if (isSubscribedError && isSubscribedError.code !== "PGRST116") {
         // PGRST116 is "no rows returned"
         throw isSubscribedError;
       }

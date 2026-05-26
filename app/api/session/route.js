@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/firebase-admin";
-import { SESSION_COOKIE_NAME } from "@/lib/auth";
+import { auth } from "@/lib/firebase/firebaseAdmin";
+import { SESSION_COOKIE_NAME } from "@/lib/authConfig";
 
 const SESSION_DURATION = 1000 * 60 * 60 * 24 * 5;
 

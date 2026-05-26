@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export default function Auth() {
     sessionSynced,
     refreshSession,
     clearError: clearStoreError,
-  } = useUserStore();
+  } = authStore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = getSafeNextPath(searchParams.get("next"));
@@ -171,7 +171,7 @@ export default function Auth() {
             href="/"
             className="flex items-center gap-2 text-4xl font-semibold hover:text-gray-700"
           >
-            YouTube Clone
+            FunBx
           </Link>
         </div>
 

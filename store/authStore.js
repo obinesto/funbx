@@ -2,7 +2,6 @@ import { create } from "zustand";
 import {
   signInWithPopup,
   signOut,
-  // onAuthStateChanged,
   onIdTokenChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -10,12 +9,12 @@ import {
   GoogleAuthProvider,
   updateProfile,
 } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { auth } from "@/lib/firebase/firebaseConfig";
 import {
   findUserByEmail,
   createUser,
   updateUserFirebaseUid,
-} from "../lib/database/users";
+} from "@/lib/database/users";
 
 const provider = new GoogleAuthProvider();
 
@@ -65,7 +64,7 @@ async function clearSessionCookie() {
   }).catch(() => {});
 }
 
-const useUserStore = create((set) => ({
+const authStore = create((set) => ({
   user: null,
   token: null,
   sessionSynced: false,
@@ -286,7 +285,7 @@ const useUserStore = create((set) => ({
     const token = await currentUser.getIdToken();
     const sessionSynced = await syncSessionCookie(token, { required: true });
 
-    useUserStore.setState({
+    authStore.setState({
       user: currentUser,
       token,
       sessionSynced,
@@ -305,7 +304,7 @@ const useUserStore = create((set) => ({
 onIdTokenChanged(auth, async (currentUser) => {
   if (currentUser) {
     if (isBrowserOffline()) {
-      useUserStore.setState((state) => ({
+      authStore.setState((state) => ({
         user: currentUser,
         token: state.token || currentUser.accessToken || null,
         sessionSynced: state.sessionSynced,
@@ -322,7 +321,7 @@ onIdTokenChanged(auth, async (currentUser) => {
       // If getIdToken() succeeds, Firebase has handled token refresh if needed.
       // The token is valid.
       if (token) {
-        useUserStore.setState({
+        authStore.setState({
           user: currentUser,
           token,
           sessionSynced,
@@ -340,7 +339,7 @@ onIdTokenChanged(auth, async (currentUser) => {
       );
       await signOut(auth);
       await clearSessionCookie();
-      useUserStore.setState({
+      authStore.setState({
         user: null,
         token: null,
         sessionSynced: false,
@@ -352,7 +351,7 @@ onIdTokenChanged(auth, async (currentUser) => {
     }
   } else {
     if (isBrowserOffline()) {
-      useUserStore.setState((state) => ({
+      authStore.setState((state) => ({
         user: state.user,
         token: state.token,
         sessionSynced: state.sessionSynced,
@@ -364,7 +363,7 @@ onIdTokenChanged(auth, async (currentUser) => {
     }
 
     await clearSessionCookie();
-    useUserStore.setState({
+    authStore.setState({
       user: null,
       token: null,
       sessionSynced: false,
@@ -386,7 +385,7 @@ if (typeof window !== "undefined") {
     try {
       const token = await currentUser.getIdToken();
       const sessionSynced = await syncSessionCookie(token);
-      useUserStore.setState({
+      authStore.setState({
         user: currentUser,
         token,
         sessionSynced,
@@ -400,4 +399,4 @@ if (typeof window !== "undefined") {
   });
 }
 
-export default useUserStore;
+export default authStore;

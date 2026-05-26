@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import useUIStore from "@/hooks/useUIStore";
-import useUserStore from "@/hooks/useStore";
+import useUIStore from "@/store/sidebarStore";
+import authStore from "@/store/authStore";
 import {
   Home,
   TrendingUpIcon as Trending,
@@ -76,7 +76,7 @@ const SideBar = () => {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const { isSidebarOpen, closeSidebar } = useUIStore();
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated } = authStore();
 
   const handleNavigation = () => {
     // Close sidebar on mobile after navigation

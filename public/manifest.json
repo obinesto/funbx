@@ -1,8 +1,8 @@
 {
-  "name": "YouTube Clone App",
+  "name": "FunBx",
   "id": "/",
-  "short_name": "YouTube Clone",
-  "description": "A progressive web application that replicates the core features of YouTube.",
+  "short_name": "FunBx",
+  "description": "An entertainment hub for videos, games, music, and movies.",
   "scope": "/",
   "start_url": "/",
   "display": "standalone",
@@ -22,7 +22,7 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["entertainment", "video"],
+  "categories": ["entertainment", "video", "games", "music"],
   "screenshots": [
     {
       "src": "/preview.png",

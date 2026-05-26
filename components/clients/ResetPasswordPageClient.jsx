@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import useUserStore from "@/hooks/useStore";
+import authStore from "@/store/authStore"
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ export default function ResetPassword() {
   const [submitLoader, setSubmitLoader] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const { resetPassword } = useUserStore();
+  const { resetPassword } = authStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function ResetPassword() {
             href="/"
             className="flex items-center gap-2 text-4xl font-semibold hover:text-gray-700"
           >
-            YouTube Clone
+            FunBx
           </Link>
         </div>
 

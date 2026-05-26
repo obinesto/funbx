@@ -37,12 +37,12 @@ const Footer = () => {
         <Card className="flex flex-col items-center bg-transparent border-none shadow-none">
           <CardHeader>
             <CardTitle className="flex text-center text-xl">
-              YouTube Clone
+              FunBx
             </CardTitle>
           </CardHeader>
           <CardContent className="px-16">
             <p className="text-center text-muted-foreground">
-              A project built with Next.js, React, and Supabase.
+              Watch videos, play games, and discover more entertainment in one place.
             </p>
           </CardContent>
         </Card>
@@ -114,7 +114,7 @@ const Footer = () => {
 
       <div className="text-center text-sm text-muted-foreground">
         <p>
-          &copy; {new Date().getUTCFullYear()} YouTube Clone . All rights
+          &copy; {new Date().getUTCFullYear()} FunBx. All rights
           reserved.
         </p>
       </div>

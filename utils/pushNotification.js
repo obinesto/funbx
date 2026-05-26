@@ -1,5 +1,7 @@
+import "server-only";
+
 import webpush from "web-push";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseConfig";
 
 let vapidConfigured = false;
 
@@ -20,12 +22,6 @@ function configureVapid() {
   vapidConfigured = true;
 }
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-
 export async function sendPushNotification(subscription, payload) {
   try {
     configureVapid();
@@ -36,7 +32,7 @@ export async function sendPushNotification(subscription, payload) {
     // If a subscription is expired or invalid, it should be removed.
     if (error.statusCode === 410 || error.statusCode === 404) {
       console.log("Subscription expired or invalid. Removing...");
-      await supabaseAdmin
+      await supabase
         .from("pwa_subscriptions")
         .delete()
         .eq("endpoint", subscription.endpoint);
@@ -46,7 +42,7 @@ export async function sendPushNotification(subscription, payload) {
 }
 
 export async function getSubscriptionsForUser(userId) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("pwa_subscriptions")
     .select("subscription_data")
     .eq("user_id", userId);
