@@ -168,7 +168,7 @@ export default function Auth() {
     <div className="flex min-h-[70vh] items-center justify-center bg-background">
       <div className="w-full max-w-md">
         <div className="flex justify-center py-4">
-          <BrandLogo size="lg" />
+          <BrandLogo size="md" />
         </div>
 
         <Card>

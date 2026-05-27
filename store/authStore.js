@@ -5,7 +5,6 @@ import {
   onIdTokenChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
   GoogleAuthProvider,
   updateProfile,
 } from "firebase/auth";
@@ -243,32 +242,62 @@ const authStore = create((set) => ({
     }
   },
 
-  resetPassword: async (email) => {
+  requestPasswordResetOtp: async (email) => {
     try {
       if (isBrowserOffline()) {
         throw new Error("Network error. Check your connection and try again");
       }
 
-      const user = await findUserByEmail(email);
-      if (user) {
-        await sendPasswordResetEmail(auth, email);
+      const response = await fetch("/api/auth/password-reset/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to send reset code");
       }
 
       set({ error: null });
+      return data.message;
     } catch (error) {
-      let errorMessage = "Unable to send reset email. Please try again later";
+      const errorMessage =
+        error.message || "Unable to send reset code. Please try again later";
 
-      switch (error.code) {
-        case "auth/invalid-email":
-          errorMessage = "Enter a valid email address";
-          break;
-        case "auth/too-many-requests":
-          errorMessage = "Too many attempts. Please try again later";
-          break;
-        case "auth/network-request-failed":
-          errorMessage = "Network error. Check your connection and try again";
-          break;
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
+    }
+  },
+
+  confirmPasswordResetOtp: async ({ email, code, password }) => {
+    try {
+      if (isBrowserOffline()) {
+        throw new Error("Network error. Check your connection and try again");
       }
+
+      const response = await fetch("/api/auth/password-reset/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, code, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to reset password");
+      }
+
+      set({ error: null });
+      return data.message;
+    } catch (error) {
+      const errorMessage =
+        error.message || "Unable to reset password. Please try again later";
 
       set({ error: errorMessage });
       throw new Error(errorMessage);

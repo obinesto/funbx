@@ -19,10 +19,14 @@ import {
 
 export default function ResetPassword() {
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
   const [submitLoader, setSubmitLoader] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const { resetPassword } = authStore();
+  const { requestPasswordResetOtp, confirmPasswordResetOtp } = authStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -42,9 +46,30 @@ export default function ResetPassword() {
     setSuccessMessage("");
 
     try {
-      await resetPassword(email);
+      if (!codeSent) {
+        const message = await requestPasswordResetOtp(email);
+        setSuccessMessage(message);
+        setCodeSent(true);
+        return;
+      }
+
+      if (!/^\d{6}$/.test(code)) {
+        setErrorMessage("Enter the 6-digit code from your email");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setErrorMessage("Passwords do not match");
+        return;
+      }
+
+      const message = await confirmPasswordResetOtp({
+        email,
+        code,
+        password,
+      });
       setSuccessMessage(
-        "If an account exists for that email, a reset link will be sent shortly."
+        message || "Password updated. You can now sign in."
       );
       setErrorMessage("");
     } catch (err) {
@@ -59,7 +84,7 @@ export default function ResetPassword() {
     <div className="flex min-h-[70vh] items-center justify-center bg-background">
       <div className="w-full max-w-md">
         <div className="flex justify-center py-4">
-          <BrandLogo size="lg" />
+          <BrandLogo size="md" />
         </div>
 
         <Card>
@@ -68,8 +93,9 @@ export default function ResetPassword() {
               Reset your password
             </CardTitle>
             <CardDescription>
-              Enter your email address and we&apos;ll send you a link to reset
-              your password
+              {codeSent
+                ? "Enter the 6-digit code from your email and choose a new password."
+                : "Enter your email address and we'll send you a 6-digit reset code."}
             </CardDescription>
           </CardHeader>
 
@@ -104,9 +130,55 @@ export default function ResetPassword() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
                     placeholder="john@example.com"
+                    disabled={codeSent}
                   />
                 </div>
               </div>
+
+              {codeSent && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="code">Reset Code</Label>
+                    <Input
+                      id="code"
+                      inputMode="numeric"
+                      maxLength={6}
+                      required
+                      value={code}
+                      onChange={(e) =>
+                        setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                      placeholder="123456"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">New Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      minLength={6}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create a new password"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      required
+                      minLength={6}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm your new password"
+                    />
+                  </div>
+                </>
+              )}
 
               <Button
                 type="submit"
@@ -116,12 +188,30 @@ export default function ResetPassword() {
                 {submitLoader ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Sending reset link...
+                    {codeSent ? "Resetting password..." : "Sending code..."}
                   </span>
                 ) : (
-                  "Send reset link"
+                  codeSent ? "Reset password" : "Send reset code"
                 )}
               </Button>
+
+              {codeSent && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={submitLoader}
+                  onClick={() => {
+                    setCodeSent(false);
+                    setCode("");
+                    setPassword("");
+                    setConfirmPassword("");
+                    setSuccessMessage("");
+                  }}
+                >
+                  Use a different email
+                </Button>
+              )}
             </CardContent>
           </form>
 

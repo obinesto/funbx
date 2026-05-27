@@ -31,41 +31,43 @@ const Footer = () => {
     },
   ];
 
+  const exploreLinks = [
+    { name: "Home", href: "/" },
+    { name: "Trending", href: "/trending" },
+    { name: "Gaming", href: "/gaming" },
+    { name: "Music", href: "/music" },
+    { name: "Movies", href: "/movies" },
+    { name: "Privacy", href: "/privacy" },
+    { name: "Terms", href: "/terms" },
+  ];
+
   return (
     <footer className="mt-10 w-full overflow-hidden border-t border-border/70 bg-card/70 text-foreground shadow-[0_-18px_45px_rgba(15,23,42,0.04)] backdrop-blur-xl">
       <div className="h-px w-full bg-gradient-to-r from-transparent via-customRed/35 to-transparent" />
 
       <div className="mx-auto grid w-full max-w-[2000px] gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1.2fr_1fr_1fr] lg:px-8">
         <div className="space-y-3">
-          <BrandLogo size="md" />
+          <BrandLogo size="sm" />
           <p className="max-w-sm text-sm leading-6 text-muted-foreground">
             Watch videos, play games, and discover more entertainment in one
             place.
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 md:space-y-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/80">
             Explore
           </h2>
-          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground md:flex-col">
-            <Link href="/" className="transition-colors hover:text-customRed">
-              Home
-            </Link>
-            <Link
-              href="/trending"
-              passHref
-              className="transition-colors hover:text-customRed"
-            >
-              Trending
-            </Link>
-            <Link
-              href="/gaming"
-              passHref
-              className="transition-colors hover:text-customRed"
-            >
-              Gaming
-            </Link>
+          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+            {exploreLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="transition-colors hover:text-customRed"
+              >
+                {link.name}
+              </Link>
+            ))}
           </nav>
         </div>
 
