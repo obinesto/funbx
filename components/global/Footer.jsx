@@ -32,17 +32,16 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="mt-8 w-full overflow-hidden border-t bg-customWhite pt-4 text-customDark dark:bg-customDark dark:text-customWhite">
+    <footer className="mt-8 w-full overflow-hidden border-t bg-background pt-4 text-foreground">
       <div className="grid md:grid-cols-3">
         <Card className="flex flex-col items-center bg-transparent border-none shadow-none">
           <CardHeader>
-            <CardTitle className="flex text-center text-xl">
-              FunBx
-            </CardTitle>
+            <CardTitle className="flex text-center text-xl">FunBx</CardTitle>
           </CardHeader>
           <CardContent className="px-16">
             <p className="text-center text-muted-foreground">
-              Watch videos, play games, and discover more entertainment in one place.
+              Watch videos, play games, and discover more entertainment in one
+              place.
             </p>
           </CardContent>
         </Card>
@@ -113,10 +112,7 @@ const Footer = () => {
       <Separator className="my-6" />
 
       <div className="text-center text-sm text-muted-foreground">
-        <p>
-          &copy; {new Date().getUTCFullYear()} FunBx. All rights
-          reserved.
-        </p>
+        <p>&copy; {new Date().getUTCFullYear()} FunBx. All rights reserved.</p>
       </div>
     </footer>
   );

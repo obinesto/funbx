@@ -57,7 +57,9 @@
 
     --radius: 0.5rem
   }
-  .dark {
+  html.dark,
+  body.dark,
+  [data-theme="dark"] {
 
     --background: 240 10% 3.9%;
 

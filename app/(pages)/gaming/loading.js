@@ -28,30 +28,34 @@ function GameCardSkeleton() {
   );
 }
 
+export function GameGridLoadingSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <GameCardSkeleton key={index} />
+      ))}
+    </div>
+  );
+}
+
 export function GamingLoadingSkeleton() {
   return (
     <section className="space-y-4 pb-12">
       <Card className="border-hidden p-4">
-        <div>
-          <div className="flex items-center gap-2 text-customRed">
-            <Gamepad2 className="h-5 w-5" />
-            <Skeleton className="h-7 w-28" />
-          </div>
-          <Skeleton className="mt-2 h-4 w-56" />
+        <div className="flex items-center gap-2 text-customRed">
+          <Gamepad2 className="h-5 w-5" />
+          <Skeleton className="h-7 w-28" />
         </div>
+        <Skeleton className="mt-2 h-4 w-56" />
       </Card>
 
       <div className="flex gap-2 overflow-hidden pb-1">
-        {Array.from({ length: 7 }).map((_, index) => (
+        {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={index} className="h-6 w-20 shrink-0 rounded-full" />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <GameCardSkeleton key={index} />
-        ))}
-      </div>
+      <GameGridLoadingSkeleton />
     </section>
   );
 }

@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
 
   if (!isOnline && isProtectedRoute && !token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+      <div className="fixed inset-0 z-[100] flex min-h-dvh items-center justify-center bg-background px-4 text-foreground">
         <div className="w-full max-w-md rounded-lg border bg-card p-6 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-customRed/10 text-customRed">
             <WifiOff className="h-6 w-6" />
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
 
   if (loading && isOnline) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+      <div className="fixed inset-0 z-[100] flex min-h-dvh items-center justify-center bg-background px-4 text-foreground">
         <div className="w-full max-w-sm space-y-4 text-center">
           <div className="mx-auto h-10 w-10 animate-pulse rounded-full bg-customRed" />
           <div>

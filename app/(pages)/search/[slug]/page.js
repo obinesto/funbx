@@ -40,7 +40,7 @@ export default async function SearchPage({ params }) {
         <Card className="p-4 border-hidden">
           <h1 className="text-xl md:text-2xl font-bold text-customRed dark:text-customRed">
             Search Results for:{" "}
-            <span className="text-customDark dark:text-customWhite font-medium sm:font-bold text-lg sm:text-xl">
+            <span className="text-foreground font-medium sm:font-bold text-lg sm:text-xl">
               {searchQuery}
             </span>
           </h1>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import useUIStore from "@/store/sidebarStore";
 import authStore from "@/store/authStore";
@@ -78,25 +78,31 @@ const SideBar = () => {
   const { isSidebarOpen, closeSidebar } = useUIStore();
   const { isAuthenticated } = authStore();
 
+  useEffect(() => {
+    closeSidebar();
+  }, [pathname, closeSidebar]);
+
   const handleNavigation = () => {
-    // Close sidebar on mobile after navigation
     if (isSidebarOpen) {
       closeSidebar();
     }
   };
 
   const NavItem = ({ item }) => {
+    const isActive =
+      item.link === "/" ? pathname === item.link : pathname.startsWith(item.link);
+
     const content = (
       <Link
         href={item.link}
         onClick={handleNavigation}
         className={cn(
-          "flex items-center px-6 py-3 hover:bg-accent rounded-lg transition-colors cursor-pointer",
-          pathname === item.link && "bg-accent",
+          "flex min-h-11 cursor-pointer items-center rounded-lg px-4 py-2.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+          isActive && "bg-accent font-medium text-accent-foreground",
           item.requiresAuth && !isAuthenticated && "opacity-75"
         )}
       >
-        <item.icon className="h-5 w-5 mr-4" />
+        <item.icon className="mr-4 h-5 w-5 shrink-0" />
         <span className="flex-1">{item.text}</span>
         {item.requiresAuth && !isAuthenticated && (
           <Lock className="h-4 w-4 text-muted-foreground" />
@@ -121,47 +127,56 @@ const SideBar = () => {
   };
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-16 h-[calc(100vh-4rem)] bg-background border-r overflow-y-auto transition-transform duration-300 ease-in-out z-50",
-        "w-64 transform md:translate-x-0",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+    <div className="contents">
+      {isSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-x-0 bottom-0 top-14 z-40 bg-black/40 backdrop-blur-[1px] md:hidden"
+          onClick={closeSidebar}
+        />
       )}
-    >
-      <nav className="p-4 space-y-4">
-        <div className="space-y-1">
-          {mainMenuItems.map((item) => (
-            <NavItem key={item.link} item={item} />
-          ))}
-        </div>
-
-        <div className="pt-4 border-t">
+      <aside
+        className={cn(
+          "fixed bottom-0 left-0 top-14 z-50 w-[min(18rem,85vw)] overflow-y-auto border-r bg-background text-foreground transition-transform duration-300 ease-in-out dark:bg-background dark:text-foreground md:static md:z-auto md:h-full md:min-h-0 md:w-64 md:self-stretch md:translate-x-0",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+      >
+        <nav className="space-y-4 p-3 sm:p-4">
           <div className="space-y-1">
-            {libraryItems.map((item) => (
+            {mainMenuItems.map((item) => (
               <NavItem key={item.link} item={item} />
             ))}
           </div>
-        </div>
 
-        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start">
-              {isExpanded ? (
-                <ChevronUp className="h-5 w-5 mr-4" />
-              ) : (
-                <ChevronDown className="h-5 w-5 mr-4" />
-              )}
-              {isExpanded ? "Show less" : "Explore"}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-1">
-            {exploreItems.map((item) => (
-              <NavItem key={item.link} item={item} />
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-      </nav>
-    </aside>
+          <div className="border-t pt-4">
+            <div className="space-y-1">
+              {libraryItems.map((item) => (
+                <NavItem key={item.link} item={item} />
+              ))}
+            </div>
+          </div>
+
+          <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start">
+                {isExpanded ? (
+                  <ChevronUp className="mr-4 h-5 w-5" />
+                ) : (
+                  <ChevronDown className="mr-4 h-5 w-5" />
+                )}
+                {isExpanded ? "Show less" : "Explore"}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1">
+              {exploreItems.map((item) => (
+                <NavItem key={item.link} item={item} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        </nav>
+      </aside>
+    </div>
   );
 };
 

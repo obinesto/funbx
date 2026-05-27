@@ -74,7 +74,7 @@ const NavBar = () => {
   };
 
   return (
-    <nav className="bg-customWhite dark:bg-customDark text-customDark dark:text-customWhite py-2 sm:py-4 px-4 sm:px-6 flex items-center justify-between fixed w-full top-0 z-50">
+    <nav className="z-50 flex h-14 shrink-0 items-center justify-between border-b bg-background px-4 text-foreground dark:bg-background dark:text-foreground sm:px-6 md:h-16">
       <div className="flex items-center gap-2 sm:gap-4">
         <Button
           variant="ghost"
@@ -145,7 +145,7 @@ const NavBar = () => {
           <DialogPortal>
             <DialogPrimitive.Content
               className={cn(
-                "sm:hidden fixed w-full top-12 z-50 bg-background shadow-lg p-0",
+                "fixed top-14 z-50 w-full bg-background p-0 shadow-lg sm:hidden",
                 "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                 "data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-top-[48%]"
               )}
@@ -315,7 +315,7 @@ const NavBar = () => {
       </div>
       {/* search results */}
       {query && (
-        <div className="fixed top-16 left-0 right-0 md:left-12 z-[49] pointer-events-none">
+        <div className="pointer-events-none fixed left-0 right-0 top-14 z-[49] md:left-64 md:top-16">
           <div className="max-w-3xl mx-auto px-2 sm:px-4 pointer-events-auto">
             <Card className="search-results p-4 max-h-80 overflow-y-auto overflow-x-hidden shadow-lg">
               {isLoading ? (
@@ -336,7 +336,7 @@ const NavBar = () => {
                         <Search className="h-4 w-4 mr-2" />
                         <Link
                           href={`/search/${video.snippet.title || query}`}
-                          className="block p-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-customDark dark:text-customWhite"
+                          className="block p-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-foreground"
                           onClick={() => setSearchQuery("")}
                         >
                           {video.snippet.title}
