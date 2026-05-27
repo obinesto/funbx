@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import BrandLogo from "@/components/global/BrandLogo";
 
 const NavBar = () => {
   const { user, logout } = authStore();
@@ -74,7 +75,7 @@ const NavBar = () => {
   };
 
   return (
-    <nav className="z-50 flex h-14 shrink-0 items-center justify-between border-b bg-background px-4 text-foreground dark:bg-background dark:text-foreground sm:px-6 md:h-16">
+    <nav className="z-50 flex h-14 shrink-0 items-center justify-between border-b border-border/70 bg-card/90 px-4 text-foreground shadow-sm shadow-black/[0.03] backdrop-blur-xl dark:bg-background dark:text-foreground sm:px-6 md:h-16">
       <div className="flex items-center gap-2 sm:gap-4">
         <Button
           variant="ghost"
@@ -88,11 +89,7 @@ const NavBar = () => {
             <Menu className="h-5 w-5" />
           )}
         </Button>
-        <Link href="/" className="flex items-center">
-          <span className="text-lg sm:text-xl md:text-2xl font-bold text-customRed whitespace-nowrap">
-            FunBx
-          </span>
-        </Link>
+        <BrandLogo size="sm" />
       </div>
 
       {/* Desktop Search */}
@@ -104,7 +101,7 @@ const NavBar = () => {
             value={query}
             onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
-            className="w-full py-2 px-4 rounded-full bg-gray-100 dark:bg-gray-700 focus:ring-2 focus:ring-customRed"
+            className="w-full rounded-full border-border/80 bg-muted/80 px-4 py-2 text-foreground shadow-inner shadow-black/[0.02] placeholder:text-muted-foreground focus:ring-2 focus:ring-customRed dark:bg-secondary"
           />
           <Button
             variant="ghost"
@@ -114,7 +111,7 @@ const NavBar = () => {
             disabled={!query}
             aria-label="Search"
           >
-            <Search className="h-4 w-4 text-gray-500 dark:text-gray-300" />
+            <Search className="h-4 w-4 text-muted-foreground" />
           </Button>
           {query && (
             <Button
@@ -123,7 +120,7 @@ const NavBar = () => {
               className="absolute right-8 top-1/2 transform -translate-y-1/2"
               onClick={() => setSearchQuery("")}
             >
-              <X className="h-4 w-4 text-gray-500 dark:text-gray-300" />
+              <X className="h-4 w-4 text-muted-foreground" />
             </Button>
           )}
         </div>

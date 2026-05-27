@@ -189,7 +189,7 @@ const VideoCard = ({
       onMouseEnter={!isSmallScreen ? () => setIsHovered(true) : undefined}
       onMouseLeave={!isSmallScreen ? () => setIsHovered(false) : undefined}
     >
-      <Card className="relative grid h-full min-h-[340px] grid-rows-[auto_1fr] overflow-hidden transition-shadow hover:shadow-lg">
+      <Card className="relative grid h-full min-h-[340px] grid-rows-[auto_1fr] overflow-hidden border-border/70 shadow-sm shadow-black/[0.03] transition-all hover:border-customRed/30 hover:shadow-xl hover:shadow-black/[0.06]">
         <div className="relative aspect-video shrink-0">
           {shouldShowVideo && isUserVideo ? (
             <video

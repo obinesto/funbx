@@ -86,7 +86,7 @@ export default function RootLayout({ children }) {
       >
         <Providers>
           <ErrorBoundary>
-            <div className="grid h-dvh grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background text-foreground dark:bg-background dark:text-foreground md:grid-cols-[16rem_minmax(0,1fr)]">
+            <div className="app-shell grid h-dvh grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden text-foreground dark:text-foreground md:grid-cols-[16rem_minmax(0,1fr)]">
               <div className="col-span-full">
                 <NavBar />
               </div>

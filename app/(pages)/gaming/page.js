@@ -86,7 +86,7 @@ async function GameGrid({ category, search }) {
 
     if (!data.games.length) {
       return (
-        <Card className="flex min-h-[240px] flex-col items-center justify-center gap-2 border-hidden p-6 text-center">
+        <Card className="flex min-h-[240px] flex-col items-center justify-center gap-2 border-border/60 bg-card/90 p-6 text-center shadow-sm shadow-black/[0.03] backdrop-blur">
           <Gamepad2 className="h-8 w-8 text-muted-foreground" />
           <h2 className="text-lg font-semibold">No games found</h2>
           <p className="text-sm text-muted-foreground">
@@ -116,17 +116,15 @@ export default async function GamingPage({ searchParams }) {
 
   return (
     <section className="space-y-4 pb-12">
-      <Card className="border-hidden p-4">
-        <div>
-          <div className="flex items-center gap-2 text-customRed">
-            <Gamepad2 className="h-5 w-5" />
-            <h1 className="text-xl font-bold md:text-2xl">Games</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Select a game to play it in-app.
-          </p>
+      <div>
+        <div className="flex items-center gap-2 text-customRed">
+          <Gamepad2 className="h-5 w-5" />
+          <h1 className="text-xl font-bold md:text-2xl">Games</h1>
         </div>
-      </Card>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Select a game to play it in-app.
+        </p>
+      </div>
 
       <Suspense
         fallback={

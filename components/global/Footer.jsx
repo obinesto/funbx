@@ -5,7 +5,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import BrandLogo from "@/components/global/BrandLogo";
 import Link from "next/link";
 import { FaGithub, FaLinkedin, FaTwitter } from "react-icons/fa";
 
@@ -32,61 +32,55 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="mt-8 w-full overflow-hidden border-t bg-background pt-4 text-foreground">
-      <div className="grid md:grid-cols-3">
-        <Card className="flex flex-col items-center bg-transparent border-none shadow-none">
-          <CardHeader>
-            <CardTitle className="flex text-center text-xl">FunBx</CardTitle>
-          </CardHeader>
-          <CardContent className="px-16">
-            <p className="text-center text-muted-foreground">
-              Watch videos, play games, and discover more entertainment in one
-              place.
-            </p>
-          </CardContent>
-        </Card>
+    <footer className="mt-10 w-full overflow-hidden border-t border-border/70 bg-card/70 text-foreground shadow-[0_-18px_45px_rgba(15,23,42,0.04)] backdrop-blur-xl">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-customRed/35 to-transparent" />
 
-        <Card className="flex flex-col items-center bg-transparent border-none shadow-none">
-          <CardHeader>
-            <CardTitle className="flex text-center text-lg">
-              Quick Links
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex px-16 gap-4 text-muted-foreground">
-            <Link href="/" className=" hover:text-customRed transition-colors">
+      <div className="mx-auto grid w-full max-w-[2000px] gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1.2fr_1fr_1fr] lg:px-8">
+        <div className="space-y-3">
+          <BrandLogo size="md" />
+          <p className="max-w-sm text-sm leading-6 text-muted-foreground">
+            Watch videos, play games, and discover more entertainment in one
+            place.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/80">
+            Explore
+          </h2>
+          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground md:flex-col">
+            <Link href="/" className="transition-colors hover:text-customRed">
               Home
             </Link>
-
             <Link
               href="/trending"
               passHref
-              className=" hover:text-customRed transition-colors"
+              className="transition-colors hover:text-customRed"
             >
               Trending
             </Link>
-
             <Link
-              href="/subscriptions"
+              href="/gaming"
               passHref
-              className=" hover:text-customRed transition-colors"
+              className="transition-colors hover:text-customRed"
             >
-              Subscriptions
+              Gaming
             </Link>
-          </CardContent>
-        </Card>
+          </nav>
+        </div>
 
-        <Card className="flex flex-col items-center bg-transparent border-none shadow-none">
-          <CardHeader>
-            <CardTitle className="text-lg">Connect</CardTitle>
-          </CardHeader>
-          <CardContent className="flex px-16 gap-4">
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/80">
+            Connect
+          </h2>
+          <div className="flex flex-wrap gap-3">
             {socialLinks.map((link) => (
               <HoverCard key={link.name} openDelay={200}>
                 <HoverCardTrigger asChild>
                   <Link
                     href={link.href}
                     target="blank"
-                    className="flex items-center space-x-2 text-muted-foreground hover:text-customRed transition-colors"
+                    className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-2 text-sm text-muted-foreground shadow-sm shadow-black/[0.02] transition-colors hover:border-customRed/30 hover:bg-accent hover:text-customRed"
                   >
                     {link.icon}
                     <span>{link.name}</span>
@@ -105,13 +99,13 @@ const Footer = () => {
                 </HoverCardContent>
               </HoverCard>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <Separator className="my-6" />
+      <Separator />
 
-      <div className="text-center text-sm text-muted-foreground">
+      <div className="px-4 py-4 text-center text-xs text-muted-foreground">
         <p>&copy; {new Date().getUTCFullYear()} FunBx. All rights reserved.</p>
       </div>
     </footer>

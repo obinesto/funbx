@@ -38,11 +38,11 @@ export default function HomeFeedClient({ initialVideos = [] }) {
 
   return (
     <section className="space-y-4">
-      <Card className="p-4 border-hidden">
+      <div>
         <h1 className="text-xl md:text-2xl font-bold text-customRed dark:text-customRed">
           Feed
         </h1>
-      </Card>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading
           ? Array.from({ length: 12 }).map((_, index) => (

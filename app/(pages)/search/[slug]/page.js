@@ -1,7 +1,6 @@
 import VideoCard from "@/components/global/VideoCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { getSearchVideos } from "@/lib/server/youtube";
 
 export const revalidate = 3600;
@@ -37,14 +36,14 @@ export default async function SearchPage({ params }) {
 
     return (
       <section className="space-y-4">
-        <Card className="p-4 border-hidden">
+        <div>
           <h1 className="text-xl md:text-2xl font-bold text-customRed dark:text-customRed">
             Search Results for:{" "}
             <span className="text-foreground font-medium sm:font-bold text-lg sm:text-xl">
               {searchQuery}
             </span>
           </h1>
-        </Card>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {videos.length > 0 ? (
             videos.map((video) => (

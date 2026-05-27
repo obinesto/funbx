@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import authStore from "@/store/authStore";
+import BrandLogo from "@/components/global/BrandLogo";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -167,12 +168,7 @@ export default function Auth() {
     <div className="flex min-h-[70vh] items-center justify-center bg-background">
       <div className="w-full max-w-md">
         <div className="flex justify-center py-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-4xl font-semibold hover:text-gray-700"
-          >
-            FunBx
-          </Link>
+          <BrandLogo size="lg" />
         </div>
 
         <Card>

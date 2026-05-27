@@ -11,7 +11,7 @@ export default function GameCard({ game }) {
       href={`/gaming/${game.slug}`}
       className="block h-full transition-transform duration-200 hover:scale-[1.02]"
     >
-      <Card className="grid h-full min-h-[360px] grid-rows-[auto_1fr] overflow-hidden transition-shadow hover:shadow-lg">
+      <Card className="grid h-full min-h-[360px] grid-rows-[auto_1fr] overflow-hidden border-border/70 shadow-sm shadow-black/[0.03] transition-all hover:border-customRed/30 hover:shadow-xl hover:shadow-black/[0.06]">
         <div className="relative aspect-video bg-muted">
           {game.thumbnail ? (
             <Image
