@@ -10,6 +10,17 @@ export default async function HistoryPage() {
     redirect("/auth?next=/history");
   }
 
-  const watchHistory = await getServerWatchHistory();
-  return <HistoryPageClient initialWatchHistory={watchHistory} />;
+  try {
+    const watchHistory = await getServerWatchHistory();
+    return <HistoryPageClient initialWatchHistory={watchHistory} />;
+  } catch (error) {
+    console.error("Failed to preload watch history:", error);
+    return (
+      <HistoryPageClient
+        serverLoadError={
+          error?.message || "Unable to preload watch history from the server."
+        }
+      />
+    );
+  }
 }

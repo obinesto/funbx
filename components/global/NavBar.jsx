@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Search,
   Menu,
@@ -72,6 +73,12 @@ const NavBar = () => {
       event.preventDefault();
       handleSearchSubmit();
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success("Signed out.");
+    router.push("/");
   };
 
   return (
@@ -291,7 +298,7 @@ const NavBar = () => {
                   <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={logout}>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

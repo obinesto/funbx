@@ -6,6 +6,11 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   GoogleAuthProvider,
+  EmailAuthProvider,
+  deleteUser,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  updatePassword,
   updateProfile,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase/firebaseConfig";
@@ -178,15 +183,19 @@ const authStore = create((set) => ({
         });
       }
 
-      const token = await result.user.getIdToken();
-      const sessionSynced = await syncSessionCookie(token, { required: true });
+      await signOut(auth);
+      await clearSessionCookie();
+
       set({
-        user: result.user,
-        token,
-        sessionSynced,
+        user: null,
+        token: null,
+        sessionSynced: false,
         error: null,
-        isAuthenticated: true,
+        isAuthenticated: false,
+        loading: false,
       });
+
+      return true;
     } catch (error) {
       let errorMessage = error.message;
       if (error.code === "auth/email-already-in-use") {
@@ -298,6 +307,136 @@ const authStore = create((set) => ({
     } catch (error) {
       const errorMessage =
         error.message || "Unable to reset password. Please try again later";
+
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
+    }
+  },
+
+  changePassword: async ({ currentPassword, newPassword }) => {
+    try {
+      if (isBrowserOffline()) {
+        throw new Error("Network error. Check your connection and try again");
+      }
+
+      const currentUser = auth.currentUser;
+
+      if (!currentUser?.email) {
+        throw new Error("Sign in again before changing your password");
+      }
+
+      if (!currentPassword || !newPassword) {
+        throw new Error("Current password and new password are required");
+      }
+
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        currentPassword,
+      );
+
+      await reauthenticateWithCredential(currentUser, credential);
+      await updatePassword(currentUser, newPassword);
+
+      const token = await currentUser.getIdToken(true);
+      const sessionSynced = await syncSessionCookie(token, { required: true });
+
+      set({
+        user: currentUser,
+        token,
+        sessionSynced,
+        error: null,
+        isAuthenticated: true,
+      });
+
+      return "Password updated successfully.";
+    } catch (error) {
+      let errorMessage =
+        error.message || "Unable to update password. Please try again later";
+
+      if (error.code === "auth/invalid-credential") {
+        errorMessage = "Current password is incorrect";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Current password is incorrect";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "New password is too weak";
+      } else if (error.code === "auth/requires-recent-login") {
+        errorMessage = "Sign in again before changing your password";
+      } else if (error.code === "auth/provider-already-linked") {
+        errorMessage = "This account is managed by a sign-in provider";
+      }
+
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
+    }
+  },
+
+  deleteAccount: async ({ currentPassword } = {}) => {
+    try {
+      if (isBrowserOffline()) {
+        throw new Error("Network error. Check your connection and try again");
+      }
+
+      const currentUser = auth.currentUser;
+
+      if (!currentUser?.email) {
+        throw new Error("Sign in again before deleting your account");
+      }
+
+      const usesPasswordProvider = currentUser.providerData.some(
+        (accountProvider) => accountProvider.providerId === "password",
+      );
+      const usesGoogleProvider = currentUser.providerData.some(
+        (accountProvider) => accountProvider.providerId === "google.com",
+      );
+
+      if (usesPasswordProvider) {
+        if (!currentPassword) {
+          throw new Error("Current password is required");
+        }
+
+        const credential = EmailAuthProvider.credential(
+          currentUser.email,
+          currentPassword,
+        );
+        await reauthenticateWithCredential(currentUser, credential);
+      } else if (usesGoogleProvider) {
+        await reauthenticateWithPopup(currentUser, provider);
+      }
+
+      const response = await fetch("/api/account", {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to delete account data");
+      }
+
+      await deleteUser(currentUser);
+      await clearSessionCookie();
+
+      set({
+        user: null,
+        token: null,
+        sessionSynced: false,
+        isAuthenticated: false,
+        error: null,
+      });
+
+      return "Your account has been deleted.";
+    } catch (error) {
+      let errorMessage =
+        error.message || "Unable to delete account. Please try again later";
+
+      if (error.code === "auth/invalid-credential") {
+        errorMessage = "Current password is incorrect";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Current password is incorrect";
+      } else if (error.code === "auth/popup-closed-by-user") {
+        errorMessage = "Google confirmation was cancelled";
+      } else if (error.code === "auth/requires-recent-login") {
+        errorMessage = "Sign in again before deleting your account";
+      }
 
       set({ error: errorMessage });
       throw new Error(errorMessage);

@@ -10,6 +10,17 @@ export default async function SavedVideosPage() {
     redirect("/auth?next=/saved-videos");
   }
 
-  const videos = await getServerSavedVideos();
-  return <SavedVideosPageClient initialVideos={videos} />;
+  try {
+    const videos = await getServerSavedVideos();
+    return <SavedVideosPageClient initialVideos={videos} />;
+  } catch (error) {
+    console.error("Failed to preload saved videos:", error);
+    return (
+      <SavedVideosPageClient
+        serverLoadError={
+          error?.message || "Unable to preload saved videos from the server."
+        }
+      />
+    );
+  }
 }

@@ -9,9 +9,14 @@ import { AlertTriangle } from "lucide-react";
 import { getVideoCardProps } from "@/utils/videoCard";
 import { clearWatchHistoryAction } from "@/lib/server/protectedActions";
 
-export default function HistoryPage({ initialWatchHistory = [] }) {
+export default function HistoryPage({
+  initialWatchHistory = [],
+  serverLoadError,
+}) {
   const [watchHistory, setWatchHistory] = useState(initialWatchHistory);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(
+    serverLoadError ? new Error(serverLoadError) : null,
+  );
   const [isPending, startTransition] = useTransition();
 
   const handleClearHistory = () => {

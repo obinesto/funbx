@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileVideo, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,11 +23,9 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
-    setError("");
 
     if (!file) {
       setVideoFile(null);
@@ -37,13 +34,13 @@ export default function UploadPage() {
 
     if (!ACCEPTED_VIDEO_TYPES.includes(file.type)) {
       setVideoFile(null);
-      setError("Upload an MP4 or MKV video.");
+      toast.error("Upload an MP4 or MKV video.");
       return;
     }
 
     if (file.size > MAX_VIDEO_FILE_SIZE) {
       setVideoFile(null);
-      setError(`Keep videos at ${MAX_VIDEO_FILE_SIZE_MB}MB or smaller.`);
+      toast.error(`Keep videos at ${MAX_VIDEO_FILE_SIZE_MB}MB or smaller.`);
       return;
     }
 
@@ -55,7 +52,6 @@ export default function UploadPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError("");
 
     if (!isAuthenticated || !user?.email || !token) {
       router.push("/auth");
@@ -63,12 +59,12 @@ export default function UploadPage() {
     }
 
     if (!videoFile) {
-      setError("Choose a video file first.");
+      toast.error("Choose a video file first.");
       return;
     }
 
     if (!title.trim()) {
-      setError("Add a title before uploading.");
+      toast.error("Add a title before uploading.");
       return;
     }
 
@@ -97,11 +93,10 @@ export default function UploadPage() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["userVideos"] });
-      toast("Video uploaded");
+      toast.success("Video uploaded");
       router.push("/your-videos");
     } catch (uploadError) {
-      setError(uploadError.message);
-      toast(uploadError.message);
+      toast.error(uploadError.message);
     } finally {
       setIsUploading(false);
     }
@@ -151,12 +146,6 @@ export default function UploadPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
               <div className="space-y-2">
                 <Label htmlFor="videoFile">Video file</Label>
                 <label

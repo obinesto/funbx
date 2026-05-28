@@ -1,13 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import authStore from "@/store/authStore";
 import BrandLogo from "@/components/global/BrandLogo";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Mail, Loader2, ArrowLeft } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -24,42 +24,28 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [submitLoader, setSubmitLoader] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const { requestPasswordResetOtp, confirmPasswordResetOtp } = authStore();
   const router = useRouter();
-
-  useEffect(() => {
-    if (errorMessage || successMessage) {
-      const timer = setTimeout(() => {
-        setErrorMessage("");
-        setSuccessMessage("");
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [errorMessage, successMessage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitLoader(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       if (!codeSent) {
         const message = await requestPasswordResetOtp(email);
-        setSuccessMessage(message);
+        toast.success(message);
         setCodeSent(true);
         return;
       }
 
       if (!/^\d{6}$/.test(code)) {
-        setErrorMessage("Enter the 6-digit code from your email");
+        toast.error("Enter the 6-digit code from your email");
         return;
       }
 
       if (password !== confirmPassword) {
-        setErrorMessage("Passwords do not match");
+        toast.error("Passwords do not match");
         return;
       }
 
@@ -68,13 +54,9 @@ export default function ResetPassword() {
         code,
         password,
       });
-      setSuccessMessage(
-        message || "Password updated. You can now sign in."
-      );
-      setErrorMessage("");
+      toast.success(message || "Password updated. You can now sign in.");
     } catch (err) {
-      setErrorMessage(err.message || "Failed to send reset email");
-      setSuccessMessage("");
+      toast.error(err.message || "Failed to send reset email");
     } finally {
       setSubmitLoader(false);
     }
@@ -101,23 +83,6 @@ export default function ResetPassword() {
 
           <form onSubmit={handleSubmit}>
             <CardContent className="grid gap-4">
-              {errorMessage && (
-                <Alert variant="destructive">
-                  <AlertDescription className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    {errorMessage}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {successMessage && (
-                <Alert className="bg-green-50 text-green-700 border-green-200">
-                  <AlertDescription className="flex items-center gap-2">
-                    {successMessage}
-                  </AlertDescription>
-                </Alert>
-              )}
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
@@ -206,7 +171,6 @@ export default function ResetPassword() {
                     setCode("");
                     setPassword("");
                     setConfirmPassword("");
-                    setSuccessMessage("");
                   }}
                 >
                   Use a different email

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import VideoCard from "@/components/global/VideoCard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -8,9 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AlertTriangle } from "lucide-react";
 import { getVideoCardProps } from "@/utils/videoCard";
 
-export default function LikedVideosPage({ initialVideos = [] }) {
+export default function LikedVideosPage({
+  initialVideos = [],
+  serverLoadError,
+}) {
   const [videos, setVideos] = useState(initialVideos);
   const [sortBy, setSortBy] = useState("recent"); // recent, oldest, popular
 
@@ -49,7 +54,18 @@ export default function LikedVideosPage({ initialVideos = [] }) {
         </Select>
       </div>
 
-      {!validVideos.length ? (
+      {serverLoadError ? (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-col items-center justify-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <span className="text-center">
+              Error loading liked videos. Please try again later.
+            </span>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {serverLoadError ? null : !validVideos.length ? (
         <div className="flex items-center justify-center min-h-[50vh]">
           <p className="text-muted-foreground">No liked videos yet</p>
         </div>

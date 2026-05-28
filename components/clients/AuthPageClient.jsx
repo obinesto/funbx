@@ -2,14 +2,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import authStore from "@/store/authStore";
 import BrandLogo from "@/components/global/BrandLogo";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Lock, User, Loader2, AlertTriangle } from "lucide-react";
+import { Mail, Lock, User, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -70,6 +70,9 @@ export default function Auth() {
           router.replace(nextPath);
         }
       } catch (error) {
+        toast.error(
+          error.message || "Unable to finish sign in. Please try again.",
+        );
         setErrorMessage(
           error.message || "Unable to finish sign in. Please try again.",
         );
@@ -101,12 +104,6 @@ export default function Auth() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handlePasswordChange = () => {
-    if (formData.password !== formData.confirmPassword) {
-      setErrorMessage("Passwords do not match");
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitLoader(true);
@@ -114,6 +111,7 @@ export default function Auth() {
 
     if (isSignUp && formData.password !== formData.confirmPassword) {
       setErrorMessage("Passwords do not match");
+      toast.error("Passwords do not match");
       setSubmitLoader(false);
       return;
     }
@@ -121,13 +119,24 @@ export default function Auth() {
     try {
       if (isSignUp) {
         await signUpWithEmail(formData);
+        toast.success("Account created. Sign in to continue.");
+        setIsSignUp(false);
+        setFormData((current) => ({
+          email: current.email,
+          password: "",
+          confirmPassword: "",
+          username: "",
+        }));
+        return;
       } else {
         await loginWithEmail(formData.email, formData.password);
+        toast.success("Signed in successfully.");
       }
 
       router.replace(nextPath);
     } catch (err) {
       setErrorMessage(err.message || "Authentication failed");
+      toast.error(err.message || "Authentication failed");
     } finally {
       setSubmitLoader(false);
     }
@@ -141,9 +150,11 @@ export default function Auth() {
       if (didLogin === false) {
         throw new Error(error || "Authentication failed");
       }
+      toast.success("Signed in with Google.");
       router.replace(nextPath);
     } catch (err) {
       setErrorMessage(err.message || "Authentication failed");
+      toast.error(err.message || "Authentication failed");
     } finally {
       setSubmitLoader(false);
     }
@@ -173,10 +184,10 @@ export default function Auth() {
 
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight">
+            <CardTitle className="text-2xl font-bold tracking-tight text-center">
               {isSignUp ? "Create an account" : "Sign in to your account"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-center">
               {isSignUp
                 ? "Enter your details below to create your account"
                 : "Enter your email below to login to your account"}
@@ -185,15 +196,6 @@ export default function Auth() {
 
           <form onSubmit={handleSubmit}>
             <CardContent className="grid gap-4">
-              {(errorMessage || error) && (
-                <Alert variant="destructive">
-                  <AlertDescription className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    {errorMessage || error}
-                  </AlertDescription>
-                </Alert>
-              )}
-
               {isSignUp && (
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
@@ -268,10 +270,7 @@ export default function Auth() {
                       type="password"
                       required={isSignUp}
                       value={formData.confirmPassword}
-                      onChange={(e) => {
-                        handleChange(e);
-                        handlePasswordChange();
-                      }}
+                      onChange={handleChange}
                       className="pl-10"
                       placeholder="••••••••"
                     />

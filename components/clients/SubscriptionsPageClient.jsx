@@ -19,10 +19,13 @@ import { setSubscriptionAction } from "@/lib/server/protectedActions";
 export default function SubscriptionsPage({
   initialSubscriptions = [],
   initialChannelData = [],
+  serverLoadError,
 }) {
   const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
   const [channelData, setChannelData] = useState(initialChannelData);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(
+    serverLoadError ? new Error(serverLoadError) : null,
+  );
   const [isPending, startTransition] = useTransition();
   const [sortOrders, setSortOrders] = useState({});
   const [showChannelVideos, setShowChannelVideos] = useState({});

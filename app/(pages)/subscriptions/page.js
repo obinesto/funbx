@@ -13,12 +13,23 @@ export default async function SubscriptionsPage() {
     redirect("/auth?next=/subscriptions");
   }
 
-  const subscriptions = await getServerSubscriptions();
-  const channelData = await getServerChannelInfo(subscriptions);
-  return (
-    <SubscriptionsPageClient
-      initialSubscriptions={subscriptions}
-      initialChannelData={channelData}
-    />
-  );
+  try {
+    const subscriptions = await getServerSubscriptions();
+    const channelData = await getServerChannelInfo(subscriptions);
+    return (
+      <SubscriptionsPageClient
+        initialSubscriptions={subscriptions}
+        initialChannelData={channelData}
+      />
+    );
+  } catch (error) {
+    console.error("Failed to preload subscriptions:", error);
+    return (
+      <SubscriptionsPageClient
+        serverLoadError={
+          error?.message || "Unable to preload subscriptions from the server."
+        }
+      />
+    );
+  }
 }

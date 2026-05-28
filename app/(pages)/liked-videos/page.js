@@ -10,6 +10,17 @@ export default async function LikedVideosPage() {
     redirect("/auth?next=/liked-videos");
   }
 
-  const videos = await getServerLikedVideos();
-  return <LikedVideosPageClient initialVideos={videos} />;
+  try {
+    const videos = await getServerLikedVideos();
+    return <LikedVideosPageClient initialVideos={videos} />;
+  } catch (error) {
+    console.error("Failed to preload liked videos:", error);
+    return (
+      <LikedVideosPageClient
+        serverLoadError={
+          error?.message || "Unable to preload liked videos from the server."
+        }
+      />
+    );
+  }
 }

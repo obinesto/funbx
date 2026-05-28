@@ -98,7 +98,7 @@ export default function RootLayout({ children }) {
             </div>
           </ErrorBoundary>
           <PwaSetup />
-          <Toaster />
+          <Toaster position="bottom-right" richColors />
         </Providers>
         <SpeedInsights />
         <Analytics />
