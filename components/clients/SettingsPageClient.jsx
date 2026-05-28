@@ -149,9 +149,9 @@ export default function SettingsPageClient() {
           <CardContent className="flex flex-col gap-4">
             <div className="rounded-lg border bg-background/70 p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 text-customRed" />
-                  <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="h-5 w-5 text-customRed" />
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">Password</p>
                     <p className="text-sm text-muted-foreground">
                       {usesPasswordProvider
@@ -160,7 +160,9 @@ export default function SettingsPageClient() {
                     </p>
                   </div>
                 </div>
-                <ChangePasswordDialog disabled={!usesPasswordProvider} />
+                {usesPasswordProvider && (
+                  <ChangePasswordDialog disabled={!usesPasswordProvider} />
+                )}
               </div>
             </div>
             <SettingsAction
@@ -175,7 +177,7 @@ export default function SettingsPageClient() {
           <CardHeader>
             <CardTitle>Preferences and Info</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+          <CardContent className="flex flex-col gap-4">
             <SettingsAction
               icon={User}
               title="Privacy policy"

@@ -76,8 +76,7 @@ export default function DeleteAccountDialog({
           <DialogHeader>
             <DialogTitle>Delete account</DialogTitle>
             <DialogDescription>
-              This permanently deletes your FunBx account, uploaded videos,
-              saved items, likes, subscriptions, and watch history.
+              This permanently deletes all data associated with your FunBx account.
             </DialogDescription>
           </DialogHeader>
 
@@ -85,8 +84,7 @@ export default function DeleteAccountDialog({
             <div className="flex gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                This action cannot be undone. You are deleting{" "}
-                <span className="font-semibold">{userEmail}</span>.
+                You are deleting your account. This action cannot be undone.
               </p>
             </div>
           </div>
@@ -108,7 +106,7 @@ export default function DeleteAccountDialog({
 
             <div className="space-y-2">
               <Label htmlFor="deleteConfirmation">
-                Type {CONFIRMATION_TEXT} to confirm
+                Type <span className="font-bold">{CONFIRMATION_TEXT}</span> to confirm
               </Label>
               <Input
                 id="deleteConfirmation"

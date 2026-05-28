@@ -40,6 +40,7 @@ import BrandLogo from "@/components/global/BrandLogo";
 
 const NavBar = () => {
   const { user, logout } = authStore();
+
   const { isSidebarOpen, toggleSidebar } = useUIStore();
   const [query, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -151,7 +152,7 @@ const NavBar = () => {
               className={cn(
                 "fixed top-14 z-50 w-full bg-background p-0 shadow-lg sm:hidden",
                 "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                "data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-top-[48%]"
+                "data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-top-[48%]",
               )}
             >
               <div className="relative flex items-center p-4 ml-4">
@@ -177,7 +178,7 @@ const NavBar = () => {
               </div>
               <DialogPrimitive.Close
                 className={cn(
-                  "absolute right-4 top-1/2 -translate-y-1/2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+                  "absolute right-4 top-1/2 -translate-y-1/2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
                 )}
               >
                 <X className="h-5 w-5" />
@@ -214,13 +215,19 @@ const NavBar = () => {
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel>Library</DropdownMenuLabel>
                 <DropdownMenuItem asChild>
-                  <Link href="/saved-videos" className="flex items-center gap-2">
+                  <Link
+                    href="/saved-videos"
+                    className="flex items-center gap-2"
+                  >
                     <Bookmark className="h-4 w-4" />
                     <span>Saved videos</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/liked-videos" className="flex items-center gap-2">
+                  <Link
+                    href="/liked-videos"
+                    className="flex items-center gap-2"
+                  >
                     <ThumbsUp className="h-4 w-4" />
                     <span>Liked videos</span>
                   </Link>
@@ -246,12 +253,16 @@ const NavBar = () => {
                     alt={user.email || "User"}
                   />
                   <AvatarFallback>
-                    {user.email?.[0]?.toUpperCase() || "U"}
+                    {user.displayName
+                      ?.split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent align="end" forceMount>
               <div className="flex items-center justify-start gap-2 p-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage
@@ -259,7 +270,11 @@ const NavBar = () => {
                     alt={user.email || "User"}
                   />
                   <AvatarFallback>
-                    {user.email?.[0]?.toUpperCase() || "U"}
+                    {user.displayName
+                      ?.split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col space-y-1 leading-none">
