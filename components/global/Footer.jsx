@@ -14,7 +14,7 @@ const Footer = () => {
     {
       name: "GitHub",
       icon: <FaGithub className="h-4 w-4" />,
-      href: "https://github.com/obinesto/youtube-clone",
+      href: "https://github.com/obinesto/funbx",
       description: "Check out the source code",
     },
     {

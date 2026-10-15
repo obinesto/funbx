@@ -3,6 +3,7 @@ import VideoPageClient from "@/components/clients/videoPageClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabaseConfig";
+import { getBaseUrl } from "@/lib/server/getBaseUrl";
 
 const isUuid = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -131,9 +132,7 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-    : "http://localhost:3000";
+  const baseUrl = await getBaseUrl();
   const pageUrl = `${baseUrl}/video/${videoId}/${
     channelIdentifier || videoData.snippet.channelId
   }`;

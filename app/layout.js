@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { getBaseUrl } from "@/lib/server/getBaseUrl";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,17 +22,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const appUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+const fallbackAppUrl = process.env.NEXT_PUBLIC_DOMAIN_URL
+  ? `https://${String(process.env.NEXT_PUBLIC_DOMAIN_URL).replace(/^https?:\/\//i, "").split("/")[0]}`
   : "http://localhost:3000";
 
-export const metadata = {
-  metadataBase: new URL(appUrl),
+const baseMetadata = {
   title: "FunBx",
   description:
     "An entertainment hub for watching videos, playing games, and discovering music and movies.",
   author: "Cyprian Obi",
-  url: appUrl,
+  url: fallbackAppUrl,
   keywords: [
     "FunBx",
     "Entertainment",
@@ -52,7 +52,7 @@ export const metadata = {
     title: "FunBx",
     description:
       "An entertainment hub for watching videos, playing games, and discovering music and movies.",
-    url: appUrl,
+    url: fallbackAppUrl,
     images: [
       {
         url: "/preview.png",
@@ -71,6 +71,20 @@ export const metadata = {
     images: ["/preview.png"],
   },
 };
+
+export async function generateMetadata() {
+  let baseUrl = fallbackAppUrl;
+  try {
+    baseUrl = await getBaseUrl();
+  } catch {
+    baseUrl = fallbackAppUrl;
+  }
+  return {
+    ...baseMetadata,
+    metadataBase: new URL(baseUrl),
+    openGraph: { ...baseMetadata.openGraph, url: baseUrl },
+  };
+}
 
 export default function RootLayout({ children }) {
   return (

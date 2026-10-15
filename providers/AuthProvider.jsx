@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import authStore from "@/store/authStore";
+import BrandLogo from "@/components/global/BrandLogo";
 import { WifiOff } from "lucide-react";
 
 // Routes that require authentication
@@ -72,7 +73,9 @@ export function AuthProvider({ children }) {
     return (
       <div className="fixed inset-0 z-[100] flex min-h-dvh items-center justify-center bg-background px-4 text-foreground">
         <div className="w-full max-w-sm space-y-4 text-center">
-          <div className="mx-auto h-10 w-10 animate-pulse rounded-full bg-customRed" />
+          <div className="flex animate-pulse justify-center">
+            <BrandLogo />
+          </div>
           <div>
             <p className="text-base font-semibold">Checking your session</p>
             <p className="text-sm text-muted-foreground">
