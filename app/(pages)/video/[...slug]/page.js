@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabaseConfig";
 import { getBaseUrl } from "@/lib/server/getBaseUrl";
+import env from "@/lib/envConfig";
 
 const isUuid = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -64,11 +65,7 @@ const getVideoData = cache(async (videoId) => {
     if (uploadedVideo) return uploadedVideo;
   }
 
-  const apiKeys = [
-    process.env.YOUTUBE_API_KEY,
-    process.env.YOUTUBE_API_KEY2,
-    process.env.YOUTUBE_API_KEY3,
-  ].filter(Boolean);
+  const apiKeys = env.server.youtubeApiKeys;
 
   if (apiKeys.length === 0) {
     console.error("No YouTube API keys are set in environment variables.");

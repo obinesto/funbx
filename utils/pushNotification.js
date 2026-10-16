@@ -2,6 +2,7 @@ import "server-only";
 
 import webpush from "web-push";
 import { supabase } from "@/lib/supabaseConfig";
+import env from "@/lib/envConfig";
 
 let vapidConfigured = false;
 
@@ -10,9 +11,9 @@ function configureVapid() {
     return;
   }
 
-  const contactEmail = process.env.AUTHOR_EMAIL;
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const contactEmail = env.server.authorEmail;
+  const publicKey = env.public.vapidPublicKey;
+  const privateKey = env.server.vapidPrivateKey;
 
   if (!contactEmail || !publicKey || !privateKey) {
     throw new Error("Missing VAPID push notification environment variables");

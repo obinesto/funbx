@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseConfig";
+import env from "@/lib/envConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -7,8 +8,8 @@ export async function GET(request) {
   const authHeader = request.headers.get("authorization");
 
   if (
-    !process.env.CRON_SECRET ||
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
+    !env.server.cronSecret ||
+    authHeader !== `Bearer ${env.server.cronSecret}`
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

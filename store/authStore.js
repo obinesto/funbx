@@ -65,7 +65,7 @@ async function clearSessionCookie() {
 
   await fetch("/api/session", {
     method: "DELETE",
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 const authStore = create((set) => ({
@@ -197,6 +197,19 @@ const authStore = create((set) => ({
 
       return true;
     } catch (error) {
+      if (
+        !String(error.code || "").startsWith("auth/") &&
+        (typeof error.status === "number"
+          ? error.status >= 500
+          : /database connection|failed to connect|service unavailable|temporarily unavailable/i.test(
+            error.message || "",
+          ))
+      ) {
+        const serviceMessage =
+          "Service temporarily unavailable. Please try again in a moment.";
+        set({ error: serviceMessage });
+        throw new Error(serviceMessage);
+      }
       let errorMessage = error.message;
       if (error.code === "auth/email-already-in-use") {
         errorMessage = "Email address already in use";
@@ -236,6 +249,21 @@ const authStore = create((set) => ({
         isAuthenticated: true,
       });
     } catch (error) {
+      const isServiceError =
+        !String(error.code || "").startsWith("auth/") &&
+        (typeof error.status === "number"
+          ? error.status >= 500
+          : /database connection|failed to connect|service unavailable|temporarily unavailable/i.test(
+            error.message || "",
+          ));
+
+      if (isServiceError) {
+        const serviceMessage =
+          "Service temporarily unavailable. Please try again later.";
+        set({ error: serviceMessage });
+        throw new Error(serviceMessage);
+      }
+
       let errorMessage = "Invalid email or password";
 
       if (error.code === "auth/invalid-email") {

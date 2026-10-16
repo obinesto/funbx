@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
 import { supabase } from "@/lib/supabaseConfig";
+import env from "@/lib/envConfig";
 
 const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3";
 
 // Helper function to make the API call and handle key rotation
-const apiKeys = [
-  process.env.YOUTUBE_API_KEY,
-  process.env.YOUTUBE_API_KEY2,
-  process.env.YOUTUBE_API_KEY3,
-].filter(Boolean); // Filter out any undefined/null keys
+const apiKeys = env.server.youtubeApiKeys; // Filter out any undefined/null keys
 
 async function fetchWithRetry(resourceType, params) {
   if (apiKeys.length === 0) {

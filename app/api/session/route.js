@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/firebase/firebaseAdmin";
 import { SESSION_COOKIE_NAME } from "@/lib/authConfig";
+import env from "@/lib/envConfig";
 
 const SESSION_DURATION = 1000 * 60 * 60 * 24 * 5;
 
@@ -21,7 +22,7 @@ export async function POST(request) {
       name: SESSION_COOKIE_NAME,
       value: sessionCookie,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: env.runtime.isProduction,
       sameSite: "lax",
       path: "/",
       maxAge: SESSION_DURATION / 1000,
@@ -40,7 +41,7 @@ export async function DELETE() {
     name: SESSION_COOKIE_NAME,
     value: "",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: env.runtime.isProduction,
     sameSite: "lax",
     path: "/",
     maxAge: 0,

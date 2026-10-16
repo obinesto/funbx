@@ -11,6 +11,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { getBaseUrl } from "@/lib/server/getBaseUrl";
+import env from "@/lib/envConfig";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,8 +23,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const fallbackAppUrl = process.env.NEXT_PUBLIC_DOMAIN_URL
-  ? `https://${String(process.env.NEXT_PUBLIC_DOMAIN_URL).replace(/^https?:\/\//i, "").split("/")[0]}`
+const fallbackAppUrl = env.public.domainHost
+  ? `https://${env.public.domainHost}`
   : "http://localhost:3000";
 
 const baseMetadata = {

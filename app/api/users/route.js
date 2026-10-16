@@ -5,9 +5,9 @@ export async function POST(request) {
   try {
     // Test Supabase connection first
     try {
-      const { data, error } = await supabase.from('users').select('count').limit(1);
+      const { error } = await supabase.from('users').select('id').limit(1);
       if (error) {
-        throw new Error('Database connection failed');
+        throw error;
       }
     } catch (error) {
       return NextResponse.json(

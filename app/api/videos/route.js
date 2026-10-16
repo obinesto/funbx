@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from 'cloudinary';
 import { validateRequest } from '@/lib/authConfig';
 import { supabase } from "@/lib/supabaseConfig";
+import env from "@/lib/envConfig";
 
 const MAX_VIDEO_FILE_SIZE = 50 * 1024 * 1024;
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: env.public.cloudinary.cloudName,
+  api_key: env.server.cloudinary.apiKey,
+  api_secret: env.server.cloudinary.apiSecret,
 });
 
 export async function GET(request) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import env from "@/lib/envConfig";
 
 // Helper function to make the API call and parse the JSON response
 async function fetchYouTubeAPI(url) {
@@ -11,9 +12,7 @@ async function fetchYouTubeAPI(url) {
 export async function GET(request, { params }) {
   const { resourceType } = await params;
   const { searchParams } = new URL(request.url);
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  const apiKey2 = process.env.YOUTUBE_API_KEY2;
-  const apiKey3 = process.env.YOUTUBE_API_KEY3;
+  const [apiKey, apiKey2, apiKey3] = env.server.youtubeApiKeys;
 
   // Vercel provides the user's country in this header. Fallback to US.
   const country = (await headers()).get("x-vercel-ip-country") || "US";

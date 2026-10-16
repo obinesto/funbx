@@ -8,6 +8,7 @@ import {
   sendTestNotificationToUser,
 } from "./actions";
 import authStore from "@/store/authStore";
+import env from "@/lib/envConfig";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,7 +193,7 @@ function PushNotificationManager() {
   const { user, token } = authStore();
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") {
+    if (!env.runtime.isProduction) {
       return;
     }
 
@@ -218,7 +219,7 @@ function PushNotificationManager() {
       if (!token) {
         throw new Error("Sign in again before enabling notifications.");
       }
-      if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+      if (!env.public.vapidPublicKey) {
         throw new Error("Push notifications are not configured.");
       }
       if (Notification.permission === "denied") {
@@ -235,7 +236,7 @@ function PushNotificationManager() {
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+          env.public.vapidPublicKey
         ),
       });
       setSubscription(sub);
@@ -384,7 +385,7 @@ export default function PwaSetup() {
     setIsClient(true);
 
     if (
-      process.env.NODE_ENV === "production" &&
+      env.runtime.isProduction &&
       "serviceWorker" in navigator
     ) {
       navigator.serviceWorker
