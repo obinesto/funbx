@@ -1,6 +1,8 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    # Keep routine updates within the existing package.json version ranges.
+    versioning-strategy: lockfile-only
     directory: "/"
     schedule:
       interval: "daily"
