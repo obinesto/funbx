@@ -1,4 +1,4 @@
-name: Merge validated Dependabot PR
+name: Resolve Dependabot PR
 
 on:
   workflow_run:
@@ -19,10 +19,12 @@ concurrency:
 jobs:
   merge:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.conclusion == 'success' ||
+       github.event.workflow_run.conclusion == 'failure' ||
+       github.event.workflow_run.conclusion == 'timed_out') &&
       github.event.workflow_run.event == 'pull_request' &&
       startsWith(github.event.workflow_run.head_branch, 'dependabot/')
-    name: Approve and merge
+    name: Merge or close PR
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -45,7 +47,7 @@ jobs:
               run.workflow_id !== workflow.id ||
               run.event !== "pull_request" ||
               run.status !== "completed" ||
-              run.conclusion !== "success" ||
+              !["success", "failure", "timed_out"].includes(run.conclusion) ||
               run.run_attempt !== eventRun.run_attempt ||
               run.head_repository?.full_name !== repository ||
               !run.head_branch?.startsWith("dependabot/")
@@ -57,12 +59,7 @@ jobs:
             const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
               owner, repo, run_id: run.id, filter: "latest", per_page: 100,
             });
-            for (const name of ["Peer dependency check", "Project checks and build"]) {
-              if (!jobs.some(job => job.name === name && job.conclusion === "success")) {
-                core.info(`Required validation did not pass: ${name}`);
-                return;
-              }
-            }
+            const requiredJobs = ["Peer dependency check", "Project checks and build"];
 
             const candidates = await github.paginate(github.rest.pulls.list, {
               owner, repo, state: "open", head: `${owner}:${run.head_branch}`, per_page: 100,
@@ -106,30 +103,110 @@ jobs:
               return;
             }
 
+            async function currentPrForResult() {
+              const { data: current } = await github.rest.pulls.get({ owner, repo, pull_number });
+              const { data: latestRun } = await github.rest.actions.getWorkflowRun({
+                owner, repo, run_id: run.id,
+              });
+              const { data: recentRuns } = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: workflow.id, branch: run.head_branch,
+                event: "pull_request", head_sha: run.head_sha, per_page: 1,
+              });
+              if (
+                !isEligible(current) ||
+                current.base.sha !== baseSha ||
+                latestRun.status !== "completed" ||
+                latestRun.conclusion !== run.conclusion ||
+                latestRun.run_attempt !== run.run_attempt ||
+                recentRuns.workflow_runs[0]?.id !== run.id
+              ) {
+                core.info("The PR or its validation changed. Fresh validation is required.");
+                return null;
+              }
+              return current;
+            }
+
+            async function deleteValidatedBranch(pr) {
+              try {
+                const { data: branch } = await github.rest.git.getRef({
+                  owner, repo, ref: "heads/" + pr.head.ref,
+                });
+                if (branch.object.sha !== run.head_sha) {
+                  core.warning("The PR branch changed after validation, so it was kept.");
+                  return;
+                }
+                await github.rest.git.deleteRef({
+                  owner, repo, ref: "heads/" + pr.head.ref,
+                });
+                core.info("Deleted the Dependabot branch.");
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+
+            async function closeFailedPr(reason) {
+              const current = await currentPrForResult();
+              if (!current) return;
+              const { data: closed } = await github.rest.pulls.update({
+                owner, repo, pull_number, state: "closed",
+              });
+              if (closed.state !== "closed" || closed.merged || closed.head.sha !== run.head_sha) {
+                core.warning("The PR changed during closure, so its branch was kept.");
+                return;
+              }
+              core.info(reason + " Closed the Dependabot PR without merging.");
+              await deleteValidatedBranch(closed);
+            }
+
+            if (run.conclusion !== "success") {
+              const failed = jobs.some(job => requiredJobs.includes(job.name) &&
+                ["failure", "timed_out"].includes(job.conclusion));
+              if (failed) {
+                await closeFailedPr("Dependency validation failed.");
+              } else {
+                core.info("No failed dependency validation job was confirmed.");
+              }
+              return;
+            }
+            for (const name of requiredJobs) {
+              if (!jobs.some(job => job.name === name && job.conclusion === "success")) {
+                core.info("Required validation did not pass: " + name);
+                return;
+              }
+            }
+
             // Wait for other PR checks without executing or checking out PR code here.
             const checks = await exec.getExecOutput("gh", [
               "pr", "checks", String(pull_number), "--repo", repository,
               "--watch", "--interval", "10", "--fail-fast",
             ], { ignoreReturnCode: true });
             if (checks.exitCode !== 0) {
-              core.setFailed("PR checks did not pass. The PR remains open.");
+              // CLI/API errors and cancellations are not evidence of a failed check.
+              const report = await exec.getExecOutput("gh", [
+                "pr", "checks", String(pull_number), "--repo", repository, "--json", "bucket,name",
+              ], { ignoreReturnCode: true });
+              if (![0, 1, 8].includes(report.exitCode)) {
+                core.setFailed("Could not verify PR checks. The PR branch was kept.");
+                return;
+              }
+              let results;
+              try {
+                results = JSON.parse(report.stdout);
+                if (!Array.isArray(results)) throw new Error("Invalid check report");
+              } catch {
+                core.setFailed("Could not read PR checks. The PR branch was kept.");
+                return;
+              }
+              if (results.some(check => check.bucket === "fail")) {
+                await closeFailedPr("A PR check failed.");
+              } else {
+                core.setFailed("No failed check was confirmed. The PR branch was kept.");
+              }
               return;
             }
 
-            const { data: current } = await github.rest.pulls.get({ owner, repo, pull_number });
-            const { data: latestRun } = await github.rest.actions.getWorkflowRun({
-              owner, repo, run_id: run.id,
-            });
-            if (
-              !isEligible(current) ||
-              current.base.sha !== baseSha ||
-              latestRun.status !== "completed" ||
-              latestRun.conclusion !== "success" ||
-              latestRun.run_attempt !== run.run_attempt
-            ) {
-              core.info("The PR or its validation changed. Fresh validation is required.");
-              return;
-            }
+            const current = await currentPrForResult();
+            if (!current) return;
 
             const reviews = await github.paginate(github.rest.pulls.listReviews, {
               owner, repo, pull_number, per_page: 100,
@@ -167,19 +244,4 @@ jobs:
             }
             core.info(`Merged PR #${pull_number} into ${current.base.ref}.`);
 
-            // The repository may already delete merged branches automatically.
-            try {
-              const { data: branch } = await github.rest.git.getRef({
-                owner, repo, ref: `heads/${current.head.ref}`,
-              });
-              if (branch.object.sha !== run.head_sha) {
-                core.warning("The PR branch changed after validation, so it was kept.");
-                return;
-              }
-              await github.rest.git.deleteRef({
-                owner, repo, ref: `heads/${current.head.ref}`,
-              });
-              core.info("Deleted the merged Dependabot branch.");
-            } catch (error) {
-              if (error.status !== 404) throw error;
-            }
+            await deleteValidatedBranch(current);
