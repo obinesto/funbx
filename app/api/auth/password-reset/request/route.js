@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/firebase/firebaseAdmin";
+import { getFirebaseAdminAuth } from "@/lib/firebase/firebaseAdmin";
 import {
   generateOtp,
   normalizeEmail,
@@ -23,7 +23,7 @@ export async function POST(request) {
     }
 
     try {
-      await auth.getUserByEmail(normalizedEmail);
+      await getFirebaseAdminAuth().getUserByEmail(normalizedEmail);
     } catch (error) {
       return NextResponse.json({ message: genericMessage });
     }

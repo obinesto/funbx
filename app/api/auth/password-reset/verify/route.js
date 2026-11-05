@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/firebase/firebaseAdmin";
+import { getFirebaseAdminAuth } from "@/lib/firebase/firebaseAdmin";
 import {
   consumePasswordResetOtp,
   normalizeEmail,
@@ -34,6 +34,7 @@ export async function POST(request) {
       );
     }
 
+    const auth = getFirebaseAdminAuth();
     const user = await auth.getUserByEmail(normalizedEmail);
     await auth.updateUser(user.uid, { password });
     await consumePasswordResetOtp(normalizedEmail);

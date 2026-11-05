@@ -1,7 +1,7 @@
 "use server";
 
 import { sendPushNotification } from "@/utils/pushNotification";
-import { auth } from "@/lib/firebase/firebaseAdmin";
+import { getFirebaseAdminAuth } from "@/lib/firebase/firebaseAdmin";
 import { supabase } from "@/lib/supabaseConfig";
 
 async function getVerifiedUser(token) {
@@ -9,7 +9,7 @@ async function getVerifiedUser(token) {
     return { user: null, error: "User not authenticated" };
   }
 
-  const decodedToken = await auth.verifyIdToken(token);
+  const decodedToken = await getFirebaseAdminAuth().verifyIdToken(token);
   const { data: user, error: userError } = await supabase
     .from("users")
     .select("id")

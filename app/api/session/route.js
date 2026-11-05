@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/firebase/firebaseAdmin";
+import { getFirebaseAdminAuth } from "@/lib/firebase/firebaseAdmin";
 import { SESSION_COOKIE_NAME } from "@/lib/authConfig";
 import env from "@/lib/envConfig";
 
@@ -13,7 +13,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "ID token is required" }, { status: 400 });
     }
 
-    const sessionCookie = await auth.createSessionCookie(idToken, {
+    const sessionCookie = await getFirebaseAdminAuth().createSessionCookie(idToken, {
       expiresIn: SESSION_DURATION,
     });
 
