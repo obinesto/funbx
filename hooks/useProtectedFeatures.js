@@ -99,8 +99,7 @@ export function useProtectedFeatures(videoId, channelId, channelTitle) {
     }
 
     if (!userEmail || !channelId || !channelTitle) {
-      console.error("Missing required data for subscribe operation");
-      return;
+      throw new Error("Channel details are unavailable. Refresh and try again.");
     }
 
     try {
@@ -138,7 +137,7 @@ export function useProtectedFeatures(videoId, channelId, channelTitle) {
     isLoadingSavedVideo:
       savedVideoMutation.isPending || isLoadingSavedVideoStatus,
     isLoadingSubscriptions:
-      subscribeMutation.isLoading || isLoadingSubscriptionStatus,
+      subscribeMutation.isPending || isLoadingSubscriptionStatus,
   };
 }
 

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import authStore from "@/store/authStore";
+import { fetchWithAuth } from "@/lib/client/authRequests";
 
 const MAX_VIDEO_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_VIDEO_FILE_SIZE_MB = 50;
@@ -78,13 +79,10 @@ export default function UploadPage() {
     setIsUploading(true);
 
     try {
-      const response = await fetch("/api/videos", {
+      const response = await fetchWithAuth("/api/videos", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
-      });
+      }, user.email);
 
       const result = await response.json();
 

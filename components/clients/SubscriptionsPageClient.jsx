@@ -14,13 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { setSubscriptionAction } from "@/lib/server/protectedActions";
+import { useSubscribeMutation } from "@/hooks/useQueries";
 
 export default function SubscriptionsPage({
   initialSubscriptions = [],
   initialChannelData = [],
   serverLoadError,
 }) {
+  const subscriptionMutation = useSubscribeMutation();
   const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
   const [channelData, setChannelData] = useState(initialChannelData);
   const [error, setError] = useState(
@@ -59,7 +60,7 @@ export default function SubscriptionsPage({
   const handleUnsubscribe = async (channelId) => {
     startTransition(async () => {
       try {
-        await setSubscriptionAction(channelId, undefined, "remove");
+        await subscriptionMutation.mutateAsync({ channelId, action: "remove" });
         setSubscriptions((currentSubscriptions) =>
           currentSubscriptions.filter((item) => item.channel_id !== channelId),
         );

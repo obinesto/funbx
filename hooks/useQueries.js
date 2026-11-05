@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import authStore from "@/store/authStore";
+import { fetchWithAuth, ensureServerSession } from "@/lib/client/authRequests";
 import * as Sentry from "@sentry/react";
 import { handleApiError, shuffleArray } from "@/utils/queryHelpers";
 import {
@@ -27,18 +28,8 @@ export const useFeed = (options = {}) => {
         if (isAuthenticated && user?.email && token) {
           // Fetch user's watch history and likes
           const [historyResponse, likesResponse] = await Promise.all([
-            fetch(`/api/history?email=${encodeURIComponent(user.email)}`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }).catch(() => null), // Prevent Promise.all from rejecting if one fails
-            fetch(`/api/likes?email=${encodeURIComponent(user.email)}`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }).catch(() => null),
+            fetchWithAuth(`/api/history?email=${encodeURIComponent(user.email)}`, {}, user.email).catch(() => null), // Prevent Promise.all from rejecting if one fails
+            fetchWithAuth(`/api/likes?email=${encodeURIComponent(user.email)}`, {}, user.email).catch(() => null),
           ]);
 
           const historyData = historyResponse?.ok
@@ -280,7 +271,7 @@ export const useRelatedVideos = (videoId, videoTitle) => {
 
 export const useAddToHistory = () => {
   const queryClient = useQueryClient();
-  const { token, user } = authStore();
+  const { user } = authStore();
 
   return useMutation({
     mutationFn: async ({ videoId }) => {
@@ -290,10 +281,9 @@ export const useAddToHistory = () => {
           message: "Adding to watch history",
           level: "info",
         });
-        const response = await fetch(`/api/history`, {
+        const response = await fetchWithAuth(`/api/history`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -301,7 +291,7 @@ export const useAddToHistory = () => {
             email: user.email,
             action: "add",
           }),
-        });
+        }, user.email);
         if (!response.ok) throw new Error("Failed to add to history");
         return response.json();
       } catch (error) {
@@ -310,7 +300,7 @@ export const useAddToHistory = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(["watchHistory"]);
+      queryClient.invalidateQueries({ queryKey: ["watchHistory"] });
     },
   });
 };
@@ -318,7 +308,7 @@ export const useAddToHistory = () => {
 export const useVideoLikeMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ videoId, action }) => {
+    mutationFn: async ({ videoId, action, email }) => {
       try {
         Sentry.addBreadcrumb({
           category: "likes",
@@ -326,7 +316,8 @@ export const useVideoLikeMutation = () => {
           level: "info",
         });
 
-        return setVideoLikeAction(videoId, action);
+        await ensureServerSession(email);
+        return await setVideoLikeAction(videoId, action);
       } catch (error) {
         Sentry.captureException(error);
         throw error;
@@ -363,12 +354,12 @@ export const useIsVideoLiked = (videoId) => {
           level: "info",
         });
 
-        const response = await fetch(
+        const response = await fetchWithAuth(
           `/api/likes?email=${encodeURIComponent(user.email)}`,
           {
             signal,
-            headers: { Authorization: `Bearer ${token}` },
           },
+          user.email,
         );
         if (!response.ok) throw new Error("Unable to load liked videos");
         const data = await response.json();
@@ -394,7 +385,7 @@ export const useSavedVideoMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ videoId, action }) => {
+    mutationFn: async ({ videoId, action, email }) => {
       try {
         Sentry.addBreadcrumb({
           category: "saved-videos",
@@ -402,7 +393,8 @@ export const useSavedVideoMutation = () => {
           level: "info",
         });
 
-        return setSavedVideoAction(videoId, action);
+        await ensureServerSession(email);
+        return await setSavedVideoAction(videoId, action);
       } catch (error) {
         Sentry.captureException(error);
         throw error;
@@ -439,12 +431,12 @@ export const useIsInSavedVideos = (videoId) => {
           level: "info",
         });
 
-        const response = await fetch(
+        const response = await fetchWithAuth(
           `/api/saved-videos?email=${encodeURIComponent(user.email)}`,
           {
             signal,
-            headers: { Authorization: `Bearer ${token}` },
           },
+          user.email,
         );
         if (!response.ok) throw new Error("Unable to load saved videos");
         const data = await response.json();
@@ -484,18 +476,16 @@ export const useVideoMutation = () => {
         });
 
         if (type === "create") {
-          const response = await fetch("/api/videos", {
+          const response = await fetchWithAuth("/api/videos", {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
             body: data,
-          });
+          }, user.email);
 
           if (!response.ok) throw new Error(`Failed to ${type} video`);
           return response.json();
         } else if (type === "delete") {
-          return deleteVideoAction(videoId);
+          await ensureServerSession(user.email);
+          return await deleteVideoAction(videoId);
         } else {
           throw new Error("Unsupported video operation");
         }
@@ -527,14 +517,20 @@ export const useSubscribeMutation = () => {
           level: "info",
         });
 
-        return setSubscriptionAction(channelId, channelTitle, action);
+        await ensureServerSession(user.email);
+        return await setSubscriptionAction(channelId, channelTitle, action);
       } catch (error) {
         Sentry.captureException(error);
         throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+    onSuccess: async (data, variables) => {
+      const queryKey = ["isSubscribed", variables.channelId, user.email];
+      queryClient.setQueryData(queryKey, variables.action === "add");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["subscriptions"] }),
+        queryClient.invalidateQueries({ queryKey }),
+      ]);
     },
     onError: handleApiError,
   });
@@ -542,39 +538,22 @@ export const useSubscribeMutation = () => {
 
 export const useIsSubscribed = (channelId) => {
   const { isAuthenticated, token, user } = authStore();
-  const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: ["isSubscribed", channelId],
-    queryFn: async () => {
+    queryKey: ["isSubscribed", channelId, user?.email],
+    queryFn: async ({ signal }) => {
       try {
-        // First check if we have the data in the subscriptions query cache
-        const subscriptionsCache = queryClient.getQueryData(["subscriptions"]);
-        if (subscriptionsCache) {
-          const channelSubscription = subscriptionsCache.find(
-            (sub) => sub.channel_id === channelId,
-          );
-          if (channelSubscription) {
-            return channelSubscription.is_subscribed;
-          }
-        }
-
-        // If no cache, then fetch from API
         Sentry.addBreadcrumb({
           category: "subscriptions",
           message: "Checking subscription status",
           level: "info",
         });
-        const response = await fetch(
-          `/api/subscriptions?channelId=${channelId}&email=${encodeURIComponent(
+        const response = await fetchWithAuth(
+          `/api/subscriptions?channelId=${encodeURIComponent(channelId)}&email=${encodeURIComponent(
             user.email,
           )}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          },
+          { signal },
+          user.email,
         );
         if (!response.ok)
           throw new Error("Failed to check subscription status");

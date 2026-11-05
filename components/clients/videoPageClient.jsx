@@ -35,9 +35,8 @@ export default function VideoPageClient({ videoId, initialVideoData, error }) {
     enabled: !initialVideoData && !initialIsUserVideo,
   });
 
-  const channelId = video?.snippet?.channelId;
-
   const displayVideo = initialVideoData && !error ? initialVideoData : video;
+  const channelId = displayVideo?.snippet?.channelId;
   const isUserVideo = Boolean(displayVideo?.isUserVideo);
   const displayError = error || (!isUserVideo && isVideoErrorHook ? videoErrorHook : null);
 
@@ -157,7 +156,7 @@ export default function VideoPageClient({ videoId, initialVideoData, error }) {
                           setUpdateSubscription((prev) => !prev);
                         }
                       }}
-                      disabled={isLoadingSubscriptions}
+                      disabled={isLoadingSubscriptions || !channelId}
                     >
                       <Bell
                         className={`h-4 w-4 ${

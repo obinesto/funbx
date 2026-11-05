@@ -21,6 +21,13 @@ import {
 } from "@/lib/database/users";
 
 const provider = new GoogleAuthProvider();
+const SESSION_ERROR_CODES = [
+  "auth/user-token-expired",
+  "auth/invalid-user-token",
+  "auth/user-disabled",
+  "auth/user-not-found",
+  "auth/invalid-refresh-token",
+];
 
 const isBrowserOffline = () =>
   typeof navigator !== "undefined" && navigator.onLine === false;
@@ -45,7 +52,9 @@ async function syncSessionCookie(token, { required = false } = {}) {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to sync session cookie");
+      const error = new Error("Unable to renew your session. Please try again.");
+      error.status = response.status;
+      throw error;
     }
 
     return true;
@@ -471,26 +480,90 @@ const authStore = create((set) => ({
     }
   },
 
-  refreshSession: async () => {
+  expireSession: async () => {
     const currentUser = auth.currentUser;
+    const message = "Your session has expired. Please sign in again.";
+    set({
+      user: null,
+      token: null,
+      sessionSynced: false,
+      loading: false,
+      isAuthenticated: false,
+      error: message,
+    });
+    await signOut(auth).catch(() => { });
+    // Do not clear a different account that signed in while sign-out completed.
+    if (auth.currentUser && auth.currentUser !== currentUser) return;
+    await clearSessionCookie();
+    if (typeof window !== "undefined") {
+      const next = window.location.pathname + window.location.search;
+      if (window.location.pathname !== "/auth") {
+        window.location.assign(`/auth?next=${encodeURIComponent(next)}`);
+      }
+    }
+  },
 
+  getFreshToken: async (forceRefresh = false, expectedEmail) => {
+    const currentUser = auth.currentUser;
     if (!currentUser) {
+      await authStore.getState().expireSession();
+      throw new Error("Your session has expired. Please sign in again.");
+    }
+    if (expectedEmail && currentUser.email !== expectedEmail) {
+      throw new Error("Your account changed. Please try again.");
+    }
+    try {
+      // Firebase refreshes expired or nearly expired tokens here.
+      const token = await currentUser.getIdToken(forceRefresh);
+      if (auth.currentUser !== currentUser) {
+        throw new Error("Your account changed. Please try again.");
+      }
+      set({ user: currentUser, token, isAuthenticated: true });
+      return token;
+    } catch (error) {
+      if (
+        SESSION_ERROR_CODES.includes(error.code) &&
+        (!auth.currentUser || auth.currentUser === currentUser)
+      ) {
+        await authStore.getState().expireSession();
+      }
+      throw error;
+    }
+  },
+
+  refreshSession: async (expectedEmail) => {
+    if (!auth.currentUser) {
+      await authStore.getState().expireSession();
       return false;
     }
-
-    const token = await currentUser.getIdToken();
-    const sessionSynced = await syncSessionCookie(token, { required: true });
-
-    authStore.setState({
+    const currentUser = auth.currentUser;
+    let token = await authStore.getState().getFreshToken(false, expectedEmail || currentUser.email);
+    try {
+      await syncSessionCookie(token, { required: true });
+    } catch (error) {
+      if (error.status !== 401) throw error;
+      token = await authStore.getState().getFreshToken(true, expectedEmail || currentUser.email);
+      try {
+        await syncSessionCookie(token, { required: true });
+      } catch (retryError) {
+        if (retryError.status === 401 && auth.currentUser === currentUser) {
+          await authStore.getState().expireSession();
+        }
+        throw retryError;
+      }
+    }
+    if (auth.currentUser !== currentUser) {
+      throw new Error("Your account changed. Please try again.");
+    }
+    set({
       user: currentUser,
       token,
-      sessionSynced,
+      sessionSynced: true,
       loading: false,
       isAuthenticated: true,
       error: null,
     });
-
-    return sessionSynced;
+    return true;
   },
 
   clearError: () => set({ error: null }),
@@ -516,7 +589,7 @@ onIdTokenChanged(auth, async (currentUser) => {
       const sessionSynced = await syncSessionCookie(token);
       // If getIdToken() succeeds, Firebase has handled token refresh if needed.
       // The token is valid.
-      if (token) {
+      if (token && auth.currentUser === currentUser) {
         authStore.setState({
           user: currentUser,
           token,
@@ -527,23 +600,18 @@ onIdTokenChanged(auth, async (currentUser) => {
         });
       }
     } catch (error) {
-      // May happen if getIdToken() fails (e.g., network issue, token refresh fails, user disabled).
-      // This indicates the session is no longer valid.
-      console.error(
-        "onAuthStateChanged: Error getting ID token or user session invalid.",
-        error,
-      );
-      await signOut(auth);
-      await clearSessionCookie();
-      authStore.setState({
-        user: null,
-        token: null,
-        sessionSynced: false,
-        loading: false,
-        isAuthenticated: false,
-        error:
-          "Your session has expired or could not be refreshed. Please log in again.",
-      });
+      if (auth.currentUser !== currentUser) return;
+      console.error("Unable to refresh authentication:", error);
+      if (SESSION_ERROR_CODES.includes(error.code)) {
+        await authStore.getState().expireSession();
+      } else {
+        // A network failure must not invalidate a recoverable Firebase session.
+        authStore.setState({
+          loading: false,
+          sessionSynced: false,
+          error: "Unable to check your session. Check your connection and try again.",
+        });
+      }
     }
   } else {
     if (isBrowserOffline()) {
@@ -581,6 +649,7 @@ if (typeof window !== "undefined") {
     try {
       const token = await currentUser.getIdToken();
       const sessionSynced = await syncSessionCookie(token);
+      if (auth.currentUser !== currentUser) return;
       authStore.setState({
         user: currentUser,
         token,

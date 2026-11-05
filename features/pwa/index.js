@@ -241,7 +241,7 @@ function PushNotificationManager() {
       });
       setSubscription(sub);
 
-      const result = await subscribeUser(sub.toJSON(), token);
+      const result = await subscribeUser(sub.toJSON(), await authStore.getState().getFreshToken(false, user?.email));
       if (!result.success) {
         await sub.unsubscribe();
         setSubscription(null);
@@ -263,7 +263,7 @@ function PushNotificationManager() {
         throw new Error("Sign in again before disabling notifications.");
       }
       await subscription?.unsubscribe();
-      await unsubscribeUser(subscription.toJSON(), token);
+      await unsubscribeUser(subscription.toJSON(), await authStore.getState().getFreshToken(false, user?.email));
       setSubscription(null);
       setSubscriptionVisibility(false);
       toast("Notifications disabled");
@@ -285,7 +285,7 @@ function PushNotificationManager() {
       const result = await sendTestNotificationToUser(
         subscription.toJSON(),
         message,
-        token,
+        await authStore.getState().getFreshToken(false, user?.email),
       );
       if (!result.success) {
         throw new Error(result.error || "Failed to send notification.");
