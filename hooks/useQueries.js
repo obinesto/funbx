@@ -332,11 +332,19 @@ export const useVideoLikeMutation = () => {
         throw error;
       }
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["likedVideos"] });
-      queryClient.invalidateQueries({
-        queryKey: ["videoLikeStatus", variables.videoId],
+    onSuccess: async (data, variables) => {
+      const queryKey = ["likedVideos", variables.email];
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData(queryKey, (videos) => {
+        if (!videos) return videos;
+        const remaining = videos.filter(
+          (video) => video.video_id !== variables.videoId,
+        );
+        return variables.action === "like"
+          ? [...remaining, { video_id: variables.videoId }]
+          : remaining;
       });
+      return queryClient.invalidateQueries({ queryKey });
     },
     onError: handleApiError,
   });
@@ -344,58 +352,39 @@ export const useVideoLikeMutation = () => {
 
 export const useIsVideoLiked = (videoId) => {
   const { isAuthenticated, token, user } = authStore();
-  const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: ["videoLikeStatus", videoId],
-    queryFn: async () => {
+    queryKey: ["likedVideos", user?.email],
+    queryFn: async ({ signal }) => {
       try {
-        // First check if we have the data in the likedVideos query cache
-        const likedVideosCache = queryClient.getQueryData(["likedVideos"]);
-        if (likedVideosCache) {
-          const isLiked = likedVideosCache.some(
-            (video) => video.id === videoId,
-          );
-          return isLiked;
-        }
-
-        // If no cache, then fetch from API
         Sentry.addBreadcrumb({
           category: "likedVideo",
-          message: "Fetching liked video",
+          message: "Fetching liked videos",
           level: "info",
         });
 
         const response = await fetch(
-          `/api/likes?videoId=${videoId}&email=${encodeURIComponent(
-            user.email,
-          )}`,
+          `/api/likes?email=${encodeURIComponent(user.email)}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
+            signal,
+            headers: { Authorization: `Bearer ${token}` },
           },
         );
-        if (!response.ok) {
-          console.error(
-            `Failed to fetch like status for video ${videoId}: ${response.statusText}`,
-          );
-          throw new Error(
-            `Failed to fetch like status: ${response.statusText}`,
-          );
-        }
+        if (!response.ok) throw new Error("Unable to load liked videos");
         const data = await response.json();
-        return data.isLiked ?? false;
+        return data.likes || [];
       } catch (error) {
-        Sentry.captureException(error);
-        console.error("Failed to fetch like status", error);
+        if (!signal?.aborted) {
+          Sentry.captureException(error);
+          console.error("Failed to fetch like status", error);
+        }
         throw error;
       }
     },
+    select: (videos) => videos.some((video) => video.video_id === videoId),
     enabled: Boolean(isAuthenticated && token && user?.email && videoId),
     staleTime: STALE_TIME,
-    cacheTime: CACHE_TIME,
+    gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
   });
@@ -419,11 +408,19 @@ export const useSavedVideoMutation = () => {
         throw error;
       }
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["savedVideos"] });
-      queryClient.invalidateQueries({
-        queryKey: ["savedVideoStatus", variables.videoId],
+    onSuccess: async (data, variables) => {
+      const queryKey = ["savedVideos", variables.email];
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData(queryKey, (videos) => {
+        if (!videos) return videos;
+        const remaining = videos.filter(
+          (video) => video.video_id !== variables.videoId,
+        );
+        return variables.action === "add"
+          ? [...remaining, { video_id: variables.videoId }]
+          : remaining;
       });
+      return queryClient.invalidateQueries({ queryKey });
     },
     onError: handleApiError,
   });
@@ -431,52 +428,39 @@ export const useSavedVideoMutation = () => {
 
 export const useIsInSavedVideos = (videoId) => {
   const { isAuthenticated, token, user } = authStore();
-  const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: ["savedVideoStatus", videoId],
-    queryFn: async () => {
+    queryKey: ["savedVideos", user?.email],
+    queryFn: async ({ signal }) => {
       try {
-        // First check if we have the data in the saved videos query cache
-        const savedVideosCache = queryClient.getQueryData(["savedVideos"]);
-
-        if (savedVideosCache) {
-          const isInSavedVideos = savedVideosCache.some(
-            (video) => video.id === videoId,
-          );
-          return isInSavedVideos;
-        }
-
-        // If no cache, then fetch from API
         Sentry.addBreadcrumb({
           category: "saved-video",
-          message: "Fetching saved video status",
+          message: "Fetching saved videos",
           level: "info",
         });
 
         const response = await fetch(
-          `/api/saved-videos?videoId=${videoId}&email=${encodeURIComponent(
-            user.email,
-          )}`,
+          `/api/saved-videos?email=${encodeURIComponent(user.email)}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
+            signal,
+            headers: { Authorization: `Bearer ${token}` },
           },
         );
-        if (!response.ok) throw new Error("Failed to fetch saved video status");
+        if (!response.ok) throw new Error("Unable to load saved videos");
         const data = await response.json();
-        return data.isInSavedVideos ?? false;
+        return data.savedVideos || [];
       } catch (error) {
-        Sentry.captureException(error);
-        console.error("Failed to fetch saved video status", error);
+        if (!signal?.aborted) {
+          Sentry.captureException(error);
+          console.error("Failed to fetch saved video status", error);
+        }
         throw error;
       }
     },
+    select: (videos) => videos.some((video) => video.video_id === videoId),
     enabled: Boolean(isAuthenticated && token && user?.email && videoId),
     staleTime: STALE_TIME,
-    cacheTime: CACHE_TIME,
+    gcTime: CACHE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
   });

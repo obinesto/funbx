@@ -134,21 +134,29 @@ export function useProtectedFeatures(videoId, channelId, channelTitle) {
     isLiked: isLikedData ?? false,
     isSaved: isInSavedVideosData ?? false,
     isSubscribed: isSubscribedData ?? false,
-    isLoadingLike: likeMutation.isLoading || isLoadingLikeStatus,
+    isLoadingLike: likeMutation.isPending || isLoadingLikeStatus,
     isLoadingSavedVideo:
-      savedVideoMutation.isLoading || isLoadingSavedVideoStatus,
+      savedVideoMutation.isPending || isLoadingSavedVideoStatus,
     isLoadingSubscriptions:
       subscribeMutation.isLoading || isLoadingSubscriptionStatus,
   };
 }
 
-export function useVideoActions(videoId) {
+export function useVideoActions(videoId, { likedAt, savedAt } = {}) {
   const router = useRouter();
   const { isAuthenticated, user, token } = authStore();
   const userEmail = user?.email;
 
   const likeMutation = useVideoLikeMutation();
   const savedVideoMutation = useSavedVideoMutation();
+  const likeStatus = useIsVideoLiked(videoId);
+  const savedStatus = useIsInSavedVideos(videoId);
+  const isLikePending = likeMutation.isPending &&
+    likeMutation.variables?.videoId === videoId &&
+    likeMutation.variables?.email === userEmail;
+  const isSavePending = savedVideoMutation.isPending &&
+    savedVideoMutation.variables?.videoId === videoId &&
+    savedVideoMutation.variables?.email === userEmail;
 
   const handleLike = useCallback(async (nextLiked) => {
     if (!isAuthenticated) {
@@ -215,7 +223,15 @@ export function useVideoActions(videoId) {
   return {
     handleLike,
     handleSavedVideo,
-    isLoadingLike: likeMutation.isLoading,
-    isLoadingSavedVideo: savedVideoMutation.isLoading,
+    isLiked: isLikePending
+      ? likeMutation.variables.action === "like"
+      : (likeStatus.data ?? Boolean(likedAt)),
+    isSaved: isSavePending
+      ? savedVideoMutation.variables.action === "add"
+      : (savedStatus.data ?? Boolean(savedAt)),
+    isLoadingLike: isLikePending || likeStatus.isPending,
+    isLoadingSavedVideo: isSavePending || savedStatus.isPending,
+    likeStatusError: likeStatus.isError && likeStatus.data === undefined,
+    savedStatusError: savedStatus.isError && savedStatus.data === undefined,
   };
 }

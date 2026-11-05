@@ -1,3 +1,4 @@
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 import SavedVideosPageClient from "@/components/clients/SavedVideosPageClient";
 import { getCurrentUser } from "@/lib/authConfig";
 import { getServerSavedVideos } from "@/lib/server/protectedData";
@@ -11,8 +12,13 @@ export default async function SavedVideosPage() {
   }
 
   try {
-    const videos = await getServerSavedVideos();
-    return <SavedVideosPageClient initialVideos={videos} />;
+    const queryClient = new QueryClient();
+    const videos = await getServerSavedVideos(queryClient);
+    return (
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <SavedVideosPageClient initialVideos={videos} />
+      </HydrationBoundary>
+    );
   } catch (error) {
     console.error("Failed to preload saved videos:", error);
     return (

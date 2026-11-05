@@ -1,3 +1,4 @@
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 import LikedVideosPageClient from "@/components/clients/LikedVideosPageClient";
 import { getCurrentUser } from "@/lib/authConfig";
 import { getServerLikedVideos } from "@/lib/server/protectedData";
@@ -11,8 +12,13 @@ export default async function LikedVideosPage() {
   }
 
   try {
-    const videos = await getServerLikedVideos();
-    return <LikedVideosPageClient initialVideos={videos} />;
+    const queryClient = new QueryClient();
+    const videos = await getServerLikedVideos(queryClient);
+    return (
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <LikedVideosPageClient initialVideos={videos} />
+      </HydrationBoundary>
+    );
   } catch (error) {
     console.error("Failed to preload liked videos:", error);
     return (

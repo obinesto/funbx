@@ -46,16 +46,18 @@ const VideoCard = ({
   const cardElementRef = useRef(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
-  const [updateLike, setUpdateLike] = useState(Boolean(likedAt));
-  const [updateSavedVideo, setUpdateSavedVideo] = useState(Boolean(savedAt));
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const {
     handleLike,
     handleSavedVideo,
+    isLiked,
+    isSaved,
     isLoadingLike,
     isLoadingSavedVideo,
-  } = useVideoActions(videoId);
+    likeStatusError,
+    savedStatusError,
+  } = useVideoActions(videoId, { likedAt, savedAt });
 
   const formattedDate = formatDate(createdAt);
   const formattedDuration = formatDuration(duration);
@@ -164,7 +166,10 @@ const VideoCard = ({
   const shouldShowVideo = isHovered && activePlayerId === videoId;
 
   const channelTittleFormatter = () => {
-    const formattedChannelTittle = (channelTitle || "user").replaceAll(" ", "%20");
+    const formattedChannelTittle = (channelTitle || "user").replaceAll(
+      " ",
+      "%20",
+    );
     return formattedChannelTittle;
   };
 
@@ -181,258 +186,256 @@ const VideoCard = ({
 
   return (
     <>
-    <Link
-      href={`/video/${videoId}/${channelTittleFormatter()}`}
-      ref={cardElementRef}
-      id={`video-card-${videoId}`}
-      className="block h-full transition-transform hover:scale-[1.02] duration-200"
-      onMouseEnter={!isSmallScreen ? () => setIsHovered(true) : undefined}
-      onMouseLeave={!isSmallScreen ? () => setIsHovered(false) : undefined}
-    >
-      <Card className="relative grid h-full min-h-[340px] grid-rows-[auto_1fr] overflow-hidden border-border/70 shadow-sm shadow-black/[0.03] transition-all hover:border-customRed/30 hover:shadow-xl hover:shadow-black/[0.06]">
-        <div className="relative aspect-video shrink-0">
-          {shouldShowVideo && isUserVideo ? (
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              className="absolute left-0 top-0 h-full w-full object-cover"
-              muted
-              loop
-              playsInline
-              title={`Video preview: ${title || "Video"}`}
-            />
-          ) : shouldShowVideo ? (
-            <iframe
-              ref={videoRef}
-              className="w-full h-full absolute top-0 left-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              title={`Video preview: ${title || "Video"}`}
-              allowFullScreen
-            />
-          ) : (
-            <Image
-              src={thumbnail || "/placeholder.svg"}
-              alt={title || "Video thumbnail"}
-              className="object-cover"
-              loading="lazy"
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
-          )}
-          {formattedDuration && !shouldShowVideo && (
-            <div className="absolute bottom-2 right-2 px-1 py-0.5 bg-black/80 text-white text-xs rounded">
-              {formattedDuration}
-            </div>
-          )}
+      <Link
+        href={`/video/${videoId}/${channelTittleFormatter()}`}
+        ref={cardElementRef}
+        id={`video-card-${videoId}`}
+        className="block h-full transition-transform hover:scale-[1.02] duration-200"
+        onMouseEnter={!isSmallScreen ? () => setIsHovered(true) : undefined}
+        onMouseLeave={!isSmallScreen ? () => setIsHovered(false) : undefined}
+      >
+        <Card className="relative grid h-full min-h-[340px] grid-rows-[auto_1fr] overflow-hidden border-border/70 shadow-sm shadow-black/[0.03] transition-all hover:border-customRed/30 hover:shadow-xl hover:shadow-black/[0.06]">
+          <div className="relative aspect-video shrink-0">
+            {shouldShowVideo && isUserVideo ? (
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                className="absolute left-0 top-0 h-full w-full object-cover"
+                muted
+                loop
+                playsInline
+                title={`Video preview: ${title || "Video"}`}
+              />
+            ) : shouldShowVideo ? (
+              <iframe
+                ref={videoRef}
+                className="w-full h-full absolute top-0 left-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                title={`Video preview: ${title || "Video"}`}
+                allowFullScreen
+              />
+            ) : (
+              <Image
+                src={thumbnail || "/placeholder.svg"}
+                alt={title || "Video thumbnail"}
+                className="object-cover"
+                loading="lazy"
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            )}
+            {formattedDuration && !shouldShowVideo && (
+              <div className="absolute bottom-2 right-2 px-1 py-0.5 bg-black/80 text-white text-xs rounded">
+                {formattedDuration}
+              </div>
+            )}
 
-          {isOwner && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white p-1 h-auto w-auto rounded-full z-10"
+            {isOwner && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white p-1 h-auto w-auto rounded-full z-10"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                   }}
                 >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    /* handleEdit logic */
-                    toast("Edit action triggered (implement me!)");
-                  }}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsDeleteOpen(true);
-                  }}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-        <CardContent className="grid min-h-0 grid-rows-[1fr_auto] p-4">
-          <div className="min-h-0">
-            <h3 className="min-h-12 text-base font-semibold leading-6 line-clamp-2 hover:text-customRed">
-              {title}
-            </h3>
-            <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
-              {channelTitle}
-            </p>
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              {formattedViews && <span>{formattedViews} views</span>}
-              {formattedViews && formattedDate && <span>•</span>}
-              {formattedDate && (
-                <span className="line-clamp-1">{formattedDate}</span>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      /* handleEdit logic */
+                      toast("Edit action triggered (implement me!)");
+                    }}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDeleteOpen(true);
+                    }}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+          <CardContent className="grid min-h-0 grid-rows-[1fr_auto] p-4">
+            <div className="min-h-0">
+              <h3 className="min-h-12 text-base font-semibold leading-6 line-clamp-2 hover:text-customRed">
+                {title}
+              </h3>
+              <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                {channelTitle}
+              </p>
+              <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                {formattedViews && <span>{formattedViews} views</span>}
+                {formattedViews && formattedDate && <span>•</span>}
+                {formattedDate && (
+                  <span className="line-clamp-1">{formattedDate}</span>
+                )}
+              </div>
+              {watchedAt && (
+                <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                  Watched {formatDate(watchedAt)}
+                </span>
+              )}
+              {savedAt && (
+                <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                  Saved {formatDate(savedAt)}
+                </span>
+              )}
+              {likedAt && (
+                <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                  Liked {formatDate(likedAt)}
+                </span>
               )}
             </div>
-            {watchedAt && (
-              <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
-                Watched {formatDate(watchedAt)}
-              </span>
-            )}
-            {savedAt && (
-              <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
-                Saved {formatDate(savedAt)}
-              </span>
-            )}
-            {likedAt && (
-              <span className="mt-1 line-clamp-1 text-sm text-muted-foreground">
-                Liked {formatDate(likedAt)}
-              </span>
-            )}
-          </div>
 
-          {/* Video actions */}
-          <div
-            className={
-              isAuthenticated
-                ? "flex items-center justify-between pt-3"
-                : "flex items-center justify-end pt-3"
-            }
-          >
-            {isAuthenticated && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`hover:text-customRed ${
-                    updateLike ? "text-customRed" : ""
-                  }`}
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const nextLiked = !updateLike;
-                    setUpdateLike(nextLiked);
+            {/* Video actions */}
+            <div
+              className={
+                isAuthenticated
+                  ? "flex items-center justify-between pt-3"
+                  : "flex items-center justify-end pt-3"
+              }
+            >
+              {isAuthenticated && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`hover:text-customRed ${
+                      isLiked ? "text-customRed" : ""
+                    }`}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const nextLiked = !isLiked;
 
-                    try {
-                      await handleLike(nextLiked);
-                      onLikeChange?.(nextLiked);
-                    } catch (error) {
-                      toast(error.message);
-                      setUpdateLike((prev) => !prev);
+                      try {
+                        await handleLike(nextLiked);
+                        onLikeChange?.(nextLiked);
+                      } catch (error) {
+                        toast(error.message);
+                      }
+                    }}
+                    disabled={isLoadingLike || likeStatusError}
+                    aria-label={isLiked ? "Unlike video" : "Like video"}
+                    aria-pressed={isLiked}
+                    title={
+                      likeStatusError
+                        ? "Unable to load like status. Refresh to try again."
+                        : undefined
                     }
-                  }}
-                  disabled={isLoadingLike}
-                >
-                  {isLoadingLike ? null : (
+                  >
                     <ThumbsUp
-                      className={`h-4 w-4 ${
-                        updateLike ? "fill-customRed" : ""
-                      }`}
+                      className={`h-4 w-4 ${isLiked ? "fill-customRed" : ""}`}
                     />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`hover:text-customRed ${
-                    updateSavedVideo ? "text-customRed" : ""
-                  }`}
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const nextSaved = !updateSavedVideo;
-                    setUpdateSavedVideo(nextSaved);
-                    try {
-                      await handleSavedVideo(nextSaved);
-                      onSavedChange?.(nextSaved);
-                    } catch (error) {
-                      console.error(
-                        "Error updating saved video status:",
-                        error
-                      );
-                      toast(
-                        error.message || "Failed to update saved video status."
-                      );
-                      setUpdateSavedVideo((prev) => !prev);
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`hover:text-customRed ${
+                      isSaved ? "text-customRed" : ""
+                    }`}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const nextSaved = !isSaved;
+                      try {
+                        await handleSavedVideo(nextSaved);
+                        onSavedChange?.(nextSaved);
+                      } catch (error) {
+                        console.error(
+                          "Error updating saved video status:",
+                          error,
+                        );
+                        toast(
+                          error.message ||
+                            "Failed to update saved video status.",
+                        );
+                      }
+                    }}
+                    disabled={isLoadingSavedVideo || savedStatusError}
+                    aria-label={isSaved ? "Remove saved video" : "Save video"}
+                    aria-pressed={isSaved}
+                    title={
+                      savedStatusError
+                        ? "Unable to load saved status. Refresh to try again."
+                        : undefined
                     }
-                  }}
-                  disabled={isLoadingSavedVideo}
-                >
-                  {isLoadingSavedVideo ? null : (
+                  >
                     <Bookmark
-                      className={`h-4 w-4 ${
-                        updateSavedVideo ? "fill-customRed" : ""
-                      }`}
+                      className={`h-4 w-4 ${isSaved ? "fill-customRed" : ""}`}
                     />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hover:text-customRed"
-                  disabled={isLoadingSavedVideo || isLoadingLike}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(
-                      `${window.location.origin}/video/${videoId}/${channelTittleFormatter()}`
-                    );
-                    toast("Link copied to clipboard");
-                  }}
-                >
-                  {isLoadingSavedVideo || isLoadingLike ? null : (
-                    <>
-                      <PiShareFatBold className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
-            {!isAuthenticated && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hover:text-customRed"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(
-                      `${window.location.origin}/video/${videoId}/${channelTittleFormatter()}`
-                    );
-                    toast("Link copied to clipboard");
-                  }}
-                >
-                  <Card className="flex items-center gap-2 py-1 px-2 rounded-full">
-                    <span>share</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:text-customRed"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/video/${videoId}/${channelTittleFormatter()}`,
+                      );
+                      toast("Link copied to clipboard");
+                    }}
+                  >
                     <PiShareFatBold className="h-4 w-4" />
-                  </Card>
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-    <DeleteVideoDialog
-      open={isDeleteOpen}
-      onOpenChange={setIsDeleteOpen}
-      onConfirm={handleDelete}
-      isLoading={videoMutation.isPending}
-    />
+                  </Button>
+                </>
+              )}
+              {!isAuthenticated && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:text-customRed"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/video/${videoId}/${channelTittleFormatter()}`,
+                      );
+                      toast("Link copied to clipboard");
+                    }}
+                  >
+                    <Card className="flex items-center gap-2 py-1 px-2 rounded-full">
+                      <span>share</span>
+                      <PiShareFatBold className="h-4 w-4" />
+                    </Card>
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+      <DeleteVideoDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        onConfirm={handleDelete}
+        isLoading={videoMutation.isPending}
+      />
     </>
   );
 };

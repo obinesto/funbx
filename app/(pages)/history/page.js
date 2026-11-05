@@ -1,3 +1,4 @@
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 import HistoryPageClient from "@/components/clients/HistoryPageClient";
 import { getCurrentUser } from "@/lib/authConfig";
 import { getServerWatchHistory } from "@/lib/server/protectedData";
@@ -11,8 +12,13 @@ export default async function HistoryPage() {
   }
 
   try {
-    const watchHistory = await getServerWatchHistory();
-    return <HistoryPageClient initialWatchHistory={watchHistory} />;
+    const queryClient = new QueryClient();
+    const watchHistory = await getServerWatchHistory(queryClient);
+    return (
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <HistoryPageClient initialWatchHistory={watchHistory} />
+      </HydrationBoundary>
+    );
   } catch (error) {
     console.error("Failed to preload watch history:", error);
     return (
