@@ -9,16 +9,29 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import authStore from "@/store/authStore";
 import { useAddToHistory } from "@/hooks/useQueries";
 
+const getPlaybackSeconds = (value) =>
+  Number.isFinite(value) && value >= 0 ? value : 0;
+
 const VideoPlayer = ({ videoId, isUserVideo = false, videoUrl }) => {
   const { isAPIReady, error: apiError } = useYouTubePlayer();
   const { isAuthenticated, user } = authStore();
-  const addToHistory = useAddToHistory();
+  const { mutate: addToHistory } = useAddToHistory();
 
   const playerRef = useRef(null);
   const uploadedVideoRef = useRef(null);
   const playerInstance = useRef(null);
   const prevVolume = useRef(100);
   const intervalRef = useRef(null);
+  const playbackContextRef = useRef(null);
+
+  useEffect(() => {
+    playbackContextRef.current = {
+      videoId,
+      isAuthenticated,
+      userEmail: user?.email,
+      addToHistory,
+    };
+  }, [videoId, isAuthenticated, user?.email, addToHistory]);
 
   const [playerState, setPlayerState] = useState({
     isPlaying: false,
@@ -32,14 +45,14 @@ const VideoPlayer = ({ videoId, isUserVideo = false, videoUrl }) => {
     if (!playerInstance.current) return;
 
     try {
-      const currentTime = playerInstance.current.getCurrentTime() || 0;
-      const duration = playerInstance.current.getDuration() || 0;
+      const currentTime = getPlaybackSeconds(playerInstance.current.getCurrentTime());
+      const duration = getPlaybackSeconds(playerInstance.current.getDuration());
 
       setPlayerState((prev) => ({
         ...prev,
         currentTime,
         duration,
-        progress: (currentTime / duration) * 100,
+        progress: duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0,
       }));
     } catch (error) {
       console.error("Error updating player state:", error);
@@ -84,62 +97,69 @@ const VideoPlayer = ({ videoId, isUserVideo = false, videoUrl }) => {
     [playerState.duration]
   );
 
-  // Update initialization effect to be more stable
   useEffect(() => {
-    if (!isAPIReady || !playerRef.current || apiError) return;
+    const container = playerRef.current;
+    if (!isAPIReady || !container || apiError || isUserVideo) return;
 
-    // Only initialize if there is no player instance
-    if (!playerInstance.current) {
-      playerInstance.current = new window.YT.Player(playerRef.current, {
-        videoId,
-        playerVars: {
-          autoplay: 1,
-          modestbranding: 1,
-          rel: 0,
-          controls: 0,
-          playsinline: 1,
-          enablejsapi: 1,
-          origin: window.location.origin,
-          iv_load_policy: 3,
+    // YouTube replaces its target element. Keep the React-owned container intact.
+    const target = document.createElement("div");
+    container.appendChild(target);
+    let isActive = true;
+    const player = new window.YT.Player(target, {
+      width: "100%",
+      height: "100%",
+      playerVars: {
+        autoplay: 1,
+        modestbranding: 1,
+        rel: 0,
+        controls: 0,
+        playsinline: 1,
+        enablejsapi: 1,
+        origin: window.location.origin,
+        iv_load_policy: 3,
+      },
+      events: {
+        onReady: (event) => {
+          if (!isActive) return;
+          const player = event.target;
+          playerInstance.current = player;
+          player.loadVideoById(playbackContextRef.current.videoId);
+          setPlayerState((prev) => ({
+            ...prev,
+            duration: getPlaybackSeconds(player.getDuration()),
+          }));
+          player.setPlaybackQuality("auto");
         },
-        events: {
-          onReady: (event) => {
-            const player = event.target;
-            setPlayerState((prev) => ({
-              ...prev,
-              duration: player.getDuration(),
-            }));
-            player.setPlaybackQuality("auto");
-          },
-          onStateChange: (event) => {
-            const isPlaying = event.data === window.YT.PlayerState.PLAYING;
-            setPlayerState((prev) => ({ ...prev, isPlaying }));
+        onStateChange: (event) => {
+          if (!isActive) return;
+          const isPlaying = event.data === window.YT.PlayerState.PLAYING;
+          setPlayerState((prev) => ({ ...prev, isPlaying }));
 
-            if (isPlaying) {
-              startTimeUpdate();
-            } else {
-              stopTimeUpdate();
-            }
-            if (event.data === window.YT.PlayerState.ENDED) {
-              setPlayerState((prev) => ({ ...prev, progress: 100 }));
-            }
-            if (isPlaying && isAuthenticated && user?.email) {
-              addToHistory.mutate({ videoId });
-            }
-          },
+          if (isPlaying) {
+            startTimeUpdate();
+          } else {
+            stopTimeUpdate();
+          }
+          if (event.data === window.YT.PlayerState.ENDED) {
+            setPlayerState((prev) => ({ ...prev, progress: 100 }));
+          }
+          const context = playbackContextRef.current;
+          if (isPlaying && context.isAuthenticated && context.userEmail) {
+            context.addToHistory({ videoId: context.videoId });
+          }
         },
-      });
-    }
+      },
+    });
 
     return () => {
+      isActive = false;
       stopTimeUpdate();
-      // Only destroy player when component is actually unmounting
-      if (playerInstance.current && !playerRef.current) {
-        playerInstance.current.destroy();
+      player.destroy();
+      if (playerInstance.current === player) {
         playerInstance.current = null;
       }
     };
-  }, [isAPIReady, apiError]); // Reduce dependencies to only necessary ones to prevent unnecessary re-renders
+  }, [isAPIReady, apiError, isUserVideo, startTimeUpdate, stopTimeUpdate]);
 
   // Separate effect for handling video ID changes
   useEffect(() => {
@@ -148,14 +168,16 @@ const VideoPlayer = ({ videoId, isUserVideo = false, videoUrl }) => {
       setPlayerState((prev) => ({
         ...prev,
         currentTime: 0,
+        duration: 0,
         progress: 0,
       }));
     }
   }, [videoId, apiError]);
 
   const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
+    const playbackSeconds = getPlaybackSeconds(seconds);
+    const minutes = Math.floor(playbackSeconds / 60);
+    const remainingSeconds = Math.floor(playbackSeconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
@@ -175,7 +197,7 @@ const VideoPlayer = ({ videoId, isUserVideo = false, videoUrl }) => {
             playsInline
             onPlay={() => {
               if (isAuthenticated && user?.email) {
-                addToHistory.mutate({ videoId });
+                addToHistory({ videoId });
               }
             }}
           />

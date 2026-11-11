@@ -366,7 +366,7 @@ const NavBar = () => {
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No results found for "{query}".
+                  No results found for &quot;{query}&quot;.
                 </p>
               )}
             </Card>
